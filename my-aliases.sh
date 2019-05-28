@@ -1,7 +1,7 @@
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
 alias execshelll='exec $SHELL -l'
-
+alias my-aliases='gedit $HOME/.my-aliases.sh &'
 
 #install
 alias installfzf='rm -rf ~/.fzf && git clone https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install'
