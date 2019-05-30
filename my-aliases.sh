@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
-alias execshelll='exec $SHELL -l'
+alias reloadshell='exec $SHELL -l'
 alias my-aliases='gedit $HOME/.my-aliases.sh &'
 alias mvnc='mvn clean install -DskipTests -DskipITs -T03.C'
 
@@ -236,5 +236,17 @@ alias dc01='nmcli con up id dc01 --ask || nmcli con down id dc01'
 
 #build
 alias fbuild='cd $HOME/projects/federation; mvnc'
+
+#personal
+function open () {
+    xdg-open "$*" &>/dev/null
+}
+
+alias omessenger='open http://messenger.com'
+alias owhatsapp='open https://web.whatsapp.com'
+alias ojenkins='open https://jenkins.dev.connectis.org/jenkins/'
+alias orundeck='open https://infra-dc01-rundeck01.connectis.org/menu/home'
+alias ojira='open https://connectis.atlassian.net/secure/ManageRapidViews.jspa'
+
 
 
