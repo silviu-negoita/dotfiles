@@ -242,11 +242,23 @@ function open () {
     xdg-open "$*" &>/dev/null
 }
 
+function singleton(){
+	local running=1
+	if [ -z "$@" ] || [ "$#" -gt 2 ]; then
+		echo "Usage : singleton [application] [identifier in ps -e]"
+	else
+		if ([ "$#" -eq 2 ] && [ -z $(pgrep -x "$2") ]) || ([ "$#" -eq 1 ] && [ -z $(pgrep -x "$1") ]); then
+			nohup "$1" > /dev/null 2>&1 &
+		fi
+	fi
+}
+
 alias omessenger='open http://messenger.com'
 alias owhatsapp='open https://web.whatsapp.com'
 alias ojenkins='open https://jenkins.dev.connectis.org/jenkins/'
 alias orundeck='open https://infra-dc01-rundeck01.connectis.org/menu/home'
 alias ojira='open https://connectis.atlassian.net/secure/ManageRapidViews.jspa'
+alias orobot='singleton /home/silviu/Desktop/robo3t-1.2.1-linux-x86_64-3e50a65/bin/robo3t'
 
 
 
