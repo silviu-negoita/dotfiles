@@ -1,80 +1,43 @@
 #!/usr/bin/env bash
-#common
-alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
-alias reloadshell='exec $SHELL -l'
-alias my-aliases='gedit $HOME/.my-aliases.sh &'
-alias mvnc='mvn clean install -DskipTests -DskipITs -T03.C'
 
-#install
-alias installfzf='rm -rf ~/.fzf && git clone https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install'
-
-#git
-alias gitadd='git add . --all'
-alias gitpush='git push'
-alias gitpushgitorious='git push gitorious --all'
-alias gitpushgitlab='git push gitlab --all'
-alias gitpushgithub='git push github --all'
-alias gitstatus='git status'
-alias gitresethardgitcleanfd='git reset --hard && git clean -f -d'
-alias gitremotev='git remote -v'
-alias gitlogallgraphonelindecoratesource='git log --all --graph --oneline --decorate --source'
-alias gitinit='git init'
-alias gitcheckoutmaster='git checkout master'
-alias gitpushall='for remote in `git remote|grep -E lab\|hub\|origin`; do git push $remote --all; git push $remote --tags; done'
-alias gitpullall='git pull --all'
-alias gitbranch='git branch'
-alias gitbrancha='git branch -a'
-alias gitdiffcachedpatch='git diff --cached > ~/patch.txt'
-
-gitreview(){
-    if [ -z "$1" ]
-    then
-        BASE_BRANCH="master"
-        BRANCH_TO_REVIEW=`git rev-parse --abbrev-ref HEAD`
-    else
-        BASE_BRANCH="$1"
-        BRANCH_TO_REVIEW="$2"
-    fi
-    git reset --hard; git clean -f -d
-    echo "switching to branch $BASE_BRANCH"
-    eval "git checkout $BASE_BRANCH"
-    echo "merging $BRANCH_TO_REVIEW into $BASE_BRANCH"
-    eval "git merge $BRANCH_TO_REVIEW"
-#    hg ci -m "Merge for review, never push this" -s
-#    rm -rf /tmp/patch.txt
-#    hg export -a -o /tmp/patch.txt -r tip > /dev/null
-#    hg strip `hg id -i`
-#    hg import --no-commit /tmp/patch.txt
-#    hg add .
+urlencodepipe() {
+  local LANG=C; local c; while IFS= read -r c; do
+    case $c in [a-zA-Z0-9.~_-]) printf "$c"; continue ;; esac
+    printf "$c" | od -An -tx1 | tr ' ' % | tr -d '\n'
+  done <<EOF
+$(fold -w1)
+EOF
+  echo
 }
 
-# Docker
-docker_is_active=`systemctl is-active docker &> /dev/null`
-if [ $docker_is_active ]; then
-    alias dobuild='docker build .'
-    alias dobuildrunlastimage='docker build . && docker run -d `docker images -q|head -1`'
-    alias dorestart='sudo systemctl start docker'
-    alias doimages='docker images'
-    #delete all stopped containers
-    alias dormall='docker rm $(docker ps -a -q)'
-    alias dostopall='docker stop $(docker ps -q)'
-    alias dopsa='docker ps -a'
-    alias dops='docker ps'
-    alias dormiall='docker rmi `docker images -q`'
-    alias donosudo='sudo groupadd docker ; usermod -a -G docker ${USERNAME} ; sudo gpasswd -a ${USERNAME} docker ; sudo service docker restart'
-    alias dolastimage='docker images -q|head -1'
-    alias dostoplast='docker stop `docker ps -q|head -1`'
-    alias doimagesqhead1='docker images -q|head -1'
-    alias docontainersqhead1='docker ps -a -q|head -1'
-    alias dopsqhead1='docker ps -q|head -1'
-    # alias dorunlastimage='docker run -d `docker images -q|head -1`'
-    alias doretrylast="dostoplast && dorunlastimage && sleep 1s && dosshlast"
-    #delete all untagged images
-    alias docleanintermediary="docker rmi $(docker images | grep '^<none>' | awk '{print $3}')"
-    #cleanpup. delete all stopped containers and remove untagged images
-    alias docleanall="dormall ; dormiall"
-;fi
 
+urlencode() { printf "$*" | urlencodepipe ;}
+
+
+#personal
+function open () {
+    xdg-open "$*" &>/dev/null
+}
+
+function singleton(){
+	local running=1
+	if [ -z "$@" ] || [ "$#" -gt 2 ]; then
+		echo "Usage : singleton [application] [identifier in ps -e]"
+	else
+		if ([ "$#" -eq 2 ] && [ -z $(pgrep -x "$2") ]) || ([ "$#" -eq 1 ] && [ -z $(pgrep -x "$1") ]); then
+			nohup "$1" > /dev/null 2>&1 &
+		fi
+	fi
+}
+
+
+function please {
+	if [ -z "$1" ]; then
+		sudo -k $(\!\!)
+	else
+		sudo $@
+	fi
+}
 
 #Fuzzyfinder
 frmf() {
@@ -231,34 +194,51 @@ function ds() {
   [ -n "$cid" ] && docker stop "$cid"
 }
 
-#vpn
-alias dc01='nmcli con up id dc01 --ask || nmcli con down id dc01'
+# Docker
+docker_is_active=`systemctl is-active docker &> /dev/null`
+if [ $docker_is_active ]; then
+    alias dobuild='docker build .'
+    alias dobuildrunlastimage='docker build . && docker run -d `docker images -q|head -1`'
+    alias dorestart='sudo systemctl start docker'
+    alias doimages='docker images'
+    #delete all stopped containers
+    alias dormall='docker rm $(docker ps -a -q)'
+    alias dostopall='docker stop $(docker ps -q)'
+    alias dopsa='docker ps -a'
+    alias dops='docker ps'
+    alias dormiall='docker rmi `docker images -q`'
+    alias donosudo='sudo groupadd docker ; usermod -a -G docker ${USERNAME} ; sudo gpasswd -a ${USERNAME} docker ; sudo service docker restart'
+    alias dolastimage='docker images -q|head -1'
+    alias dostoplast='docker stop `docker ps -q|head -1`'
+    alias doimagesqhead1='docker images -q|head -1'
+    alias docontainersqhead1='docker ps -a -q|head -1'
+    alias dopsqhead1='docker ps -q|head -1'
+    # alias dorunlastimage='docker run -d `docker images -q|head -1`'
+    alias doretrylast="dostoplast && dorunlastimage && sleep 1s && dosshlast"
+    #delete all untagged images
+    alias docleanintermediary="docker rmi $(docker images | grep '^<none>' | awk '{print $3}')"
+    #cleanpup. delete all stopped containers and remove untagged images
+    alias docleanall="dormall ; dormiall"
+;fi
 
-#build
-alias fbuild='cd $HOME/projects/federation; mvnc'
-
-#personal
-function open () {
-    xdg-open "$*" &>/dev/null
+gitreview(){
+    if [ -z "$1" ]
+    then
+        BASE_BRANCH="master"
+        BRANCH_TO_REVIEW=`git rev-parse --abbrev-ref HEAD`
+    else
+        BASE_BRANCH="$1"
+        BRANCH_TO_REVIEW="$2"
+    fi
+    git reset --hard; git clean -f -d
+    echo "switching to branch $BASE_BRANCH"
+    eval "git checkout $BASE_BRANCH"
+    echo "merging $BRANCH_TO_REVIEW into $BASE_BRANCH"
+    eval "git merge $BRANCH_TO_REVIEW"
+#    hg ci -m "Merge for review, never push this" -s
+#    rm -rf /tmp/patch.txt
+#    hg export -a -o /tmp/patch.txt -r tip > /dev/null
+#    hg strip `hg id -i`
+#    hg import --no-commit /tmp/patch.txt
+#    hg add .
 }
-
-function singleton(){
-	local running=1
-	if [ -z "$@" ] || [ "$#" -gt 2 ]; then
-		echo "Usage : singleton [application] [identifier in ps -e]"
-	else
-		if ([ "$#" -eq 2 ] && [ -z $(pgrep -x "$2") ]) || ([ "$#" -eq 1 ] && [ -z $(pgrep -x "$1") ]); then
-			nohup "$1" > /dev/null 2>&1 &
-		fi
-	fi
-}
-
-alias omessenger='open http://messenger.com'
-alias owhatsapp='open https://web.whatsapp.com'
-alias ojenkins='open https://jenkins.dev.connectis.org/jenkins/'
-alias orundeck='open https://infra-dc01-rundeck01.connectis.org/menu/home'
-alias ojira='open https://connectis.atlassian.net/secure/ManageRapidViews.jspa'
-alias orobot='singleton /home/silviu/Desktop/robo3t-1.2.1-linux-x86_64-3e50a65/bin/robo3t'
-
-
-

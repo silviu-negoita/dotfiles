@@ -1,10 +1,10 @@
 ZSH=$HOME/.oh-my-zsh
 ZSH_THEME="robbyrussell"
 
-if [ -f $HOME/.my-aliases.sh ]
-then
-  source $HOME/.my-aliases.sh
-fi
+for f in ~/.my_*;
+  do
+    source ${f};
+  done;
 
 plugins=(git bundler brew gem rbates)
 
