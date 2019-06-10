@@ -30,15 +30,6 @@ function singleton(){
 	fi
 }
 
-
-function please {
-	if [ -z "$1" ]; then
-		sudo -k $(\!\!)
-	else
-		sudo $@
-	fi
-}
-
 #Fuzzyfinder
 frmf() {
   local file
@@ -242,3 +233,10 @@ gitreview(){
 #    hg import --no-commit /tmp/patch.txt
 #    hg add .
 }
+
+# bind keys
+
+insert_sudo () { zle beginning-of-line; zle -U "sudo " }
+zle -N insert-sudo insert_sudo
+bindkey "^[s" insert-sudo
+
