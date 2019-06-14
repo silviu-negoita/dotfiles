@@ -4,6 +4,7 @@ export PROJECTS_PATH=$HOME'/projects'
 export FEDERATION_PATH=${PROJECTS_PATH}'/federation'
 export JENKINS_BASE_URL='https://jenkins.dev.connectis.org/jenkins/job/software/job/federation-pipeline/job/'
 export JIRA_BASE_URL='https://connectis.atlassian.net/browse/'
+export BITBUCKET_BASE_URL='https://bitbucket.org/connectis/'
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
 alias reloadshell='exec $SHELL -l'
@@ -40,7 +41,7 @@ alias fbuild='cd $HOME/projects/federation; mvnc'
 
 #open
 
-alias omessenger='open http://messenger.com'
+alias omessenger='open http://messenger.com'k
 alias owhatsapp='open https://web.whatsapp.com'
 alias orundeck='open https://infra-dc01-rundeck01.connectis.org/menu/home'
 alias orobot='singleton /home/silviu/Desktop/robo3t-1.2.1-linux-x86_64-3e50a65/bin/robo3t'
@@ -55,3 +56,10 @@ ojira() {
     open ${JIRA_BASE_URL}${jira_branch_param}
 }
 
+obitbucket() {
+    project_relative_path=`ls ${PROJECTS_PATH} | fzf`
+    project_absolute_path=${PROJECTS_PATH}/${project_relative_path}
+    branch_name=`(cd ${project_absolute_path};hg branch)`
+    bitbucket_url=${BITBUCKET_BASE_URL}${project_relative_path}/branch/${branch_name}
+    open ${bitbucket_url}
+}
