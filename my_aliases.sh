@@ -63,3 +63,14 @@ obitbucket() {
     bitbucket_url=${BITBUCKET_BASE_URL}${project_relative_path}/branch/${branch_name}
     open ${bitbucket_url}
 }
+
+
+redeployssoplugin() {
+    (cd ~/projects/federation/connectis/applications/broker/idp-connectors/sso; mvnc);
+    (cd ~/projects/federation/connectis/applications/broker/idp-connectors; mvnc);
+    (cd ~/projects/federation/connectis/applications/broker/core; mvnc);
+    (cd ~/projects/federation/connectis/applications/broker/war; mvnc);
+    (cd ~/projects/federation/connectis/applications/broker/; mvnc);
+    (cd ~/projects/federation/connectis/customers/connectis/broker/; mvnc);
+    (cd ~/projects/federation/; sudo docker-compose restart tomcat-federation);
+}
