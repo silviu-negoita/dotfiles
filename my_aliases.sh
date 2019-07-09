@@ -8,7 +8,7 @@ export BITBUCKET_BASE_URL='https://bitbucket.org/connectis/'
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
 alias reloadshell='exec $SHELL -l'
-alias my-aliases='gedit $HOME/.my_aliases.sh &'
+alias my_aliases='gedit $HOME/.my_aliases.sh &'
 alias mvnc='mvn clean install -DskipTests -DskipITs -T03.C'
 
 #install
@@ -32,20 +32,20 @@ alias gitbranch='git branch'
 alias gitbrancha='git branch -a'
 alias gitdiffcachedpatch='git diff --cached > ~/patch.txt'
 
-
 #vpn
 alias dc01='nmcli con up id dc01 --ask || nmcli con down id dc01'
 
 #build
-alias fbuild='cd $HOME/projects/federation; mvnc'
+alias fbuild='(cd $FEDERATION_PATH; mvnc)'
 
 #open
 
-alias omessenger='open http://messenger.com'k
+alias omessenger='open http://messenger.com'
 alias owhatsapp='open https://web.whatsapp.com'
 alias orundeck='open https://infra-dc01-rundeck01.connectis.org/menu/home'
 alias orobot='singleton /home/silviu/Desktop/robo3t-1.2.1-linux-x86_64-3e50a65/bin/robo3t'
 
+#tools
 ojenkins() {
     branch_name=`getbranchname ${FEDERATION_PATH}`
     encoded_branch=`urlencode ${branch_name}`
@@ -65,7 +65,7 @@ obitbucket() {
     open ${bitbucket_url}
 }
 
-
+#custom temp
 redeployssoplugin() {
     (cd FEDERATION_PATH/connectis/applications/broker/idp-connectors/sso; mvnc);
     (cd FEDERATION_PATH/connectis/applications/broker/idp-connectors; mvnc);
