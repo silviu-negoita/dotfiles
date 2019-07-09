@@ -47,30 +47,32 @@ alias orundeck='open https://infra-dc01-rundeck01.connectis.org/menu/home'
 alias orobot='singleton /home/silviu/Desktop/robo3t-1.2.1-linux-x86_64-3e50a65/bin/robo3t'
 
 ojenkins() {
-    encoded_branch=`(cd ${FEDERATION_PATH};(urlencode $(hg branch)))`
+    branch_name=`getbranchname ${FEDERATION_PATH}`
+    encoded_branch=`urlencode ${branch_name}`
     open ${JENKINS_BASE_URL}${encoded_branch}
 }
 
 ojira() {
-    jira_branch_param=`(cd ${FEDERATION_PATH};(hg branch)) | sed 's/feature\///'`
+    jira_branch_param=`getbranchname ${FEDERATION_PATH} | sed 's/feature\///'`
     open ${JIRA_BASE_URL}${jira_branch_param}
 }
 
 obitbucket() {
     project_relative_path=`ls ${PROJECTS_PATH} | fzf`
     project_absolute_path=${PROJECTS_PATH}/${project_relative_path}
-    branch_name=`(cd ${project_absolute_path};hg branch)`
+    branch_name=`getbranchname ${project_absolute_path}`
     bitbucket_url=${BITBUCKET_BASE_URL}${project_relative_path}/branch/${branch_name}
     open ${bitbucket_url}
 }
 
 
 redeployssoplugin() {
-    (cd ~/projects/federation/connectis/applications/broker/idp-connectors/sso; mvnc);
-    (cd ~/projects/federation/connectis/applications/broker/idp-connectors; mvnc);
-    (cd ~/projects/federation/connectis/applications/broker/core; mvnc);
-    (cd ~/projects/federation/connectis/applications/broker/war; mvnc);
-    (cd ~/projects/federation/connectis/applications/broker/; mvnc);
-    (cd ~/projects/federation/connectis/customers/connectis/broker/; mvnc);
-    (cd ~/projects/federation/; sudo docker-compose restart tomcat-federation);
+    (cd FEDERATION_PATH/connectis/applications/broker/idp-connectors/sso; mvnc);
+    (cd FEDERATION_PATH/connectis/applications/broker/idp-connectors; mvnc);
+    (cd FEDERATION_PATH/connectis/applications/broker/core; mvnc);
+    (cd FEDERATION_PATH/connectis/applications/broker/war; mvnc);
+    (cd FEDERATION_PATH/connectis/applications/broker/web; mvnc);
+    (cd FEDERATION_PATH/connectis/applications/broker/; mvnc);
+    (cd FEDERATION_PATH/connectis/customers/connectis/broker/; mvnc);
+    (cd FEDERATION_PATH/; sudo docker-compose restart tomcat-federation);
 }

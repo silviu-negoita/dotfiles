@@ -236,6 +236,14 @@ gitreview(){
 
 # bind keys
 
+getbranchname(){
+    if [ -d $1/.git ]
+    then
+        echo `(cd $1; git branch | grep \* | cut -d ' ' -f2)`
+    else
+        echo `(cd $1; hg branch)`
+    fi
+}
 insert_sudo () { zle beginning-of-line; zle -U "sudo " }
 zle -N insert-sudo insert_sudo
 bindkey "^[s" insert-sudo
