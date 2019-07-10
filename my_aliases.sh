@@ -5,6 +5,7 @@ export FEDERATION_PATH=${PROJECTS_PATH}'/federation'
 export JENKINS_BASE_URL='https://jenkins.dev.connectis.org/jenkins/job/software/job/federation-pipeline/job/'
 export JIRA_BASE_URL='https://connectis.atlassian.net/browse/'
 export BITBUCKET_BASE_URL='https://bitbucket.org/connectis/'
+export UPSOURCE_BASE_URL='https://upsource.dev.connectis.org/federation-git/branch/'
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
 alias reloadshell='exec $SHELL -l'
@@ -63,6 +64,12 @@ obitbucket() {
     branch_name=`getbranchname ${project_absolute_path}`
     bitbucket_url=${BITBUCKET_BASE_URL}${project_relative_path}/branch/${branch_name}
     open ${bitbucket_url}
+}
+
+oupsource() {
+    branch_name=`getbranchname ${FEDERATION_PATH}`
+    upsource_url=${UPSOURCE_BASE_URL}${branch_name}
+    open ${upsource_url}
 }
 
 #custom temp
