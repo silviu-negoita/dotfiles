@@ -244,6 +244,11 @@ getbranchname(){
         echo `(cd $1; hg branch)`
     fi
 }
+
+getallbranches() {
+    echo `(cd $1; git fetch & gitbrancha | cut -d ' ' -f2)`
+}
+
 insert_sudo () { zle beginning-of-line; zle -U "sudo " }
 zle -N insert-sudo insert_sudo
 bindkey "^[s" insert-sudo

@@ -72,6 +72,20 @@ oupsource() {
     open ${upsource_url}
 }
 
+ointellij() {
+    project_relative_path=`ls ${PROJECTS_PATH} | fzf`
+    project_absolute_path=${PROJECTS_PATH}/${project_relative_path}
+    idea ${project_absolute_path} > /dev/null
+}
+
+#gitcheckout() {
+#    project_relative_path=`ls ${PROJECTS_PATH} | fzf`
+#    project_absolute_path=${PROJECTS_PATH}/${project_relative_path}
+#    branch_name=`getallbranches ${project_absolute_path} | fzf`
+#    echo ${branch_name}
+#    #work in progress
+#}
+
 #custom temp
 redeployssoplugin() {
     (cd FEDERATION_PATH/connectis/applications/broker/idp-connectors/sso; mvnc);
