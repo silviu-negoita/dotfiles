@@ -8,9 +8,14 @@ export BITBUCKET_BASE_URL='https://bitbucket.org/connectis/'
 export UPSOURCE_BASE_URL='https://upsource.dev.connectis.org/federation-git/branch/'
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
-alias reloadshell='exec $SHELL -l'
+reloadshell() {
+    echo "Shell is reloaded"
+    exec $SHELL -l
+}
 alias my_aliases='gedit $HOME/.my_aliases.sh &'
 alias mvnc='mvn clean install -DskipTests -DskipITs -T03.C'
+alias mvni='mvn install -DskipTests -DskipITs -T03.C'
+alias mvnd='mvn dependency:tree | gedit -'
 
 #install
 alias installfzf='rm -rf ~/.fzf && git clone https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install'
@@ -86,14 +91,41 @@ ointellij() {
 #    #work in progress
 #}
 
+
 #custom temp
-redeployssoplugin() {
-    (cd FEDERATION_PATH/connectis/applications/broker/idp-connectors/sso; mvnc);
-    (cd FEDERATION_PATH/connectis/applications/broker/idp-connectors; mvnc);
-    (cd FEDERATION_PATH/connectis/applications/broker/core; mvnc);
-    (cd FEDERATION_PATH/connectis/applications/broker/war; mvnc);
-    (cd FEDERATION_PATH/connectis/applications/broker/web; mvnc);
-    (cd FEDERATION_PATH/connectis/applications/broker/; mvnc);
-    (cd FEDERATION_PATH/connectis/customers/connectis/broker/; mvnc);
-    (cd FEDERATION_PATH/; sudo docker-compose restart tomcat-federation);
+redeployqrplugin() {
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors/qrcode; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/core; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/war; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/web; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/customers/connectis/broker/; mvnc);
+    (cd ${FEDERATION_PATH}/; sudo docker-compose restart tomcat-federation);
+}
+
+buildqrplugin() {
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors/qrcode; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors; mvnc);
+}
+
+bbroker() {
+    curl --user tomcat:tomcat "https://qrcode.local.test-development.nl/manager/text/stop?path=/broker"
+    buildqrplugin
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/web/common; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/common/; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/war/; mvni);
+    curl --user tomcat:tomcat "https://qrcode.local.test-development.nl/manager/text/start?path=/broker"
+}
+
+hbbroker() {
+    buildqrplugin
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/web/common; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/common/; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/war/; mvni );
+    dockerrebuild tomcat-federation;
+}
+
+dockerrebuild() {
+    sudo docker-compose up -d --force-recreate --no-deps --build $1
 }
