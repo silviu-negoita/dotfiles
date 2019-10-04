@@ -2,7 +2,7 @@
 # constants
 export PROJECTS_PATH=$HOME'/projects'
 export FEDERATION_PATH=${PROJECTS_PATH}'/federation'
-export JENKINS_BASE_URL='https://jenkins.dev.connectis.org/jenkins/job/software/job/federation-pipeline/job/'
+export JENKINS_BASE_URL='https://jenkins.dev.connectis.org/jenkins/job/software/job/federation/job/'
 export JIRA_BASE_URL='https://connectis.atlassian.net/browse/'
 export BITBUCKET_BASE_URL='https://bitbucket.org/connectis/'
 export UPSOURCE_BASE_URL='https://upsource.dev.connectis.org/federation-git/branch/'
