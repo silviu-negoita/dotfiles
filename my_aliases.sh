@@ -37,6 +37,10 @@ alias gitpullall='git pull --all'
 alias gitbranch='git branch'
 alias gitbrancha='git branch -a'
 alias gitdiffcachedpatch='git diff --cached > ~/patch.txt'
+function gitcleanlocal() {
+    git branch -vv | grep 'origin/.*: gone]' | awk '{print $1}' | xargs git branch -D
+}
+alias gitcleanremote='git remote prune origin'
 
 #vpn
 alias dc01='nmcli con up id dc01 --ask || nmcli con down id dc01'
