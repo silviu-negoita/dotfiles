@@ -6,7 +6,7 @@ for f in ~/.my_*;
     source ${f};
   done;
 
-plugins=(git bundler brew gem rbates)
+plugins=(git bundler brew gem rbates mvn web-search rand-quote themes)
 
 export PATH="/usr/local/bin:$PATH"
 export EDITOR='mate -w'

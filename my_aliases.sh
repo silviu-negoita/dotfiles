@@ -48,6 +48,9 @@ alias dc01='nmcli con up id dc01 --ask || nmcli con down id dc01'
 #build
 alias fbuild='(cd $FEDERATION_PATH; mvnc)'
 
+#funny
+yolo='git commit -m "$(curl -s https://whatthecommit.com/index.txt)"'
+
 #open
 
 alias omessenger='open http://messenger.com'
