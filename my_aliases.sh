@@ -147,6 +147,6 @@ redeploytemplates() {
 
 redeploystatic() {
   (cd ${FEDERATION_PATH}/connectis/theme/static; mvnc);
-  (cd ${FEDERATION_PATH}/docker/images/tomcat/apache; mvnc);
+  (cd ${FEDERATION_PATH}/docker/images/apache; mvnc);
   (cd ${FEDERATION_PATH}; docker-compose -f docker-compose.yml -f ./docker/compose-profiles/minimal.yml up -d --force-recreate --no-deps --build apache)
 }
