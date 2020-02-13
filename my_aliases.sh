@@ -99,20 +99,9 @@ ointellij() {
 #}
 
 
-#custom temp
-redeployqrplugin() {
-    (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors/qrcode; mvnc);
-    (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors; mvnc);
-    (cd ${FEDERATION_PATH}/connectis/applications/broker/core; mvnc);
-    (cd ${FEDERATION_PATH}/connectis/applications/broker/war; mvnc);
-    (cd ${FEDERATION_PATH}/connectis/applications/broker/web; mvnc);
-    (cd ${FEDERATION_PATH}/connectis/applications/broker/; mvnc);
-    (cd ${FEDERATION_PATH}/connectis/customers/connectis/broker/; mvnc);
-    (cd ${FEDERATION_PATH}/; sudo docker-compose restart tomcat-federation);
-}
 
 buildqrplugin() {
-    (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors/qrcode; mvnc);
+    (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors/idin; mvnc);
     (cd ${FEDERATION_PATH}/connectis/applications/broker/idp-connectors; mvnc);
 }
 
@@ -125,6 +114,15 @@ bbroker() {
     curl --user tomcat:tomcat "https://qrcode.local.test-development.nl/manager/text/start?path=/broker"
 }
 
+bidinsimulator() {
+  curl --user tomcat:tomcat "https://qrcode.local.test-development.nl/manager/text/stop?path=/idin-simulator"
+
+  (cd ${FEDERATION_PATH}/connectis/applications/idin-simulator/idin-simulator-jar; mvnc);
+  (cd ${FEDERATION_PATH}/connectis/applications/idin-simulator/idin-simulator; mvni);
+
+  curl --user tomcat:tomcat "https://qrcode.local.test-development.nl/manager/text/start?path=/idin-simulator"
+}
+
 hbbroker() {
     buildqrplugin
     (cd ${FEDERATION_PATH}/connectis/applications/broker/web/common; mvnc);
@@ -135,4 +133,20 @@ hbbroker() {
 
 dockerrebuild() {
     sudo docker-compose up -d --force-recreate --no-deps --build $1
+}
+
+killport() {
+ sudo kill -9 `sudo lsof -t -i:$1`
+}
+
+redeploytemplates() {
+  (cd ${FEDERATION_PATH}/connectis/theme/templates; mvnc);
+  (cd ${FEDERATION_PATH}/docker/images/tomcat/federation; mvnc);
+  (cd ${FEDERATION_PATH}; docker-compose -f docker-compose.yml -f ./docker/compose-profiles/minimal.yml up -d --force-recreate --no-deps --build tomcat-federation)
+}
+
+redeploystatic() {
+  (cd ${FEDERATION_PATH}/connectis/theme/static; mvnc);
+  (cd ${FEDERATION_PATH}/docker/images/tomcat/apache; mvnc);
+  (cd ${FEDERATION_PATH}; docker-compose -f docker-compose.yml -f ./docker/compose-profiles/minimal.yml up -d --force-recreate --no-deps --build apache)
 }
