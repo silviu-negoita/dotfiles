@@ -226,12 +226,6 @@ gitreview(){
     eval "git checkout $BASE_BRANCH"
     echo "merging $BRANCH_TO_REVIEW into $BASE_BRANCH"
     eval "git merge $BRANCH_TO_REVIEW"
-#    hg ci -m "Merge for review, never push this" -s
-#    rm -rf /tmp/patch.txt
-#    hg export -a -o /tmp/patch.txt -r tip > /dev/null
-#    hg strip `hg id -i`
-#    hg import --no-commit /tmp/patch.txt
-#    hg add .
 }
 
 # bind keys
@@ -246,7 +240,7 @@ getbranchname(){
 }
 
 getallbranches() {
-    echo `(cd $1; git fetch & gitbrancha | cut -d ' ' -f2)`
+    echo `(cd $1; git fetch && (git branch -r  | fzf))`
 }
 
 insert_sudo () { zle beginning-of-line; zle -U "sudo " }
