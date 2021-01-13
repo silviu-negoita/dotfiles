@@ -5,6 +5,7 @@ export FEDERATION_PATH=${PROJECTS_PATH}'/federation'
 export JENKINS_BASE_URL='https://jenkins.dev.connectis.org/jenkins/job/software/job/federation/job/'
 export JIRA_BASE_URL='https://connectis.atlassian.net/browse/'
 export BITBUCKET_BASE_URL='https://bitbucket.org/connectis/'
+export GITLAB_BASE_URL='https://gitlab.com/connectiscom/myconnectis-ng/myconnectis/-/tree/'
 export UPSOURCE_BASE_URL='https://upsource.dev.connectis.org/federation-git/branch/'
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
@@ -78,6 +79,21 @@ obitbucket() {
     open ${bitbucket_url}
 }
 
+obranch() {
+    myc_absolute_path=${PROJECTS_PATH}/myconnectis
+    branch_name=`getbranchname ${myc_absolute_path}`
+    gitlab_url=${GITLAB_BASE_URL}/${branch_name}
+    open ${gitlab_url}
+}
+
+omergerequests() {
+  open https://gitlab.com/connectiscom/myconnectis-ng/myconnectis/-/merge_requests
+}
+
+#kubectl -n myc get pods
+#kubectl -n myc logs -f <pod-name>
+
+
 oupsource() {
     branch_name=`getbranchname ${FEDERATION_PATH}`
     upsource_url=${UPSOURCE_BASE_URL}${branch_name}
@@ -131,6 +147,23 @@ hbbroker() {
     dockerrebuild tomcat-federation;
 }
 
+dl() {
+  docker logs -f $1
+}
+
+dr() {
+  docker restart $1
+}
+
+drl() {
+  dr $1
+  dl $1
+}
+
+docker-cleanup() {
+  echo "Stopping.. " && docker stop $(docker ps -a -q) && echo "Removing.. " && docker rm $(docker ps -a -q)
+}
+
 dockerrebuild() {
     sudo docker-compose up -d --force-recreate --no-deps --build $1
 }
@@ -150,3 +183,5 @@ redeploystatic() {
   (cd ${FEDERATION_PATH}/docker/images/apache; mvnc);
   (cd ${FEDERATION_PATH}; docker-compose -f docker-compose.yml -f ./docker/compose-profiles/minimal.yml up -d --force-recreate --no-deps --build apache)
 }
+
+
