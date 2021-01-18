@@ -49,10 +49,7 @@ alias fbuild='(cd $FEDERATION_PATH; mvnc)'
 
 #funny
 yolo() {
-  echo "ASADASDASDASD"
-  git add . --all;
   git commit -m "$(curl http://whatthecommit.com/index.txt)" > /dev/null;
-  git push;
 }
 
 #open
@@ -118,4 +115,8 @@ dockerrebuild() {
 killport() {
  sudo kill -9 `sudo lsof -t -i:$1`
 }
+
+#TODO
+# install tilix, sublime, fix shortcuts
+#
 
