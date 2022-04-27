@@ -155,5 +155,3 @@ pullsecrets() {
 updatesecrets() {
     python3 ~/projects/automation/scripts/gitlab_secrets/secrets_mgmt.py -u $1
 }
-
-# wireguard port 51820/ pass gamingpass123
