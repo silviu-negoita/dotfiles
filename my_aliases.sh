@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # constants
 export PROJECTS_PATH=$HOME'/projects'
-export GITLAB_BASE_URL='https://gitlab.com/connectiscom/myconnectis-ng/myconnectis/-/tree/'
-export GITLAB_BASE_URL='https://gitlab.com/connectiscom/myconnectis-ng/myconnectis/-/tree/'
-export IDEA_PATH=$HOME'/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0/203.6682.168/bin'
+export GITLAB_BASE_URL='https://gitlab.com/signicat/orange-stack/self-service/my-signicat/-/tree/'
+export IDEA_PATH=$HOME'/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0/212.5457.46/bin/'
 
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
@@ -44,6 +43,12 @@ alias gitcleanremote='git remote prune origin'
 #vpn
 alias dc01='nmcli con up id dc01 --ask || nmcli con down id dc01'
 
+function vpnup() {
+  echo "Please insert token value bellow"
+  read tokenVar
+  echo "vpn.secrets.password:$LDAP_PASS$tokenVar" > /tmp/vpn-pass
+  nmcli con up id dc01 passwd-file /tmp/vpn-pass
+}
 #build
 alias fbuild='(cd $FEDERATION_PATH; mvnc)'
 
@@ -61,14 +66,14 @@ obranch() {
     project_relative_path=`ls ${PROJECTS_PATH} | fzf`
     project_absolute_path=${PROJECTS_PATH}/${project_relative_path}
     branch_name=`getbranchname ${project_absolute_path}`
-    gitlab_url=https://gitlab.com/connectiscom/myconnectis-ng/${project_relative_path}/-/tree/${branch_name}
+    gitlab_url=https://gitlab.com/signicat/orange-stack/self-service/${project_relative_path}/-/tree/${branch_name}
     open ${gitlab_url}
 }
 
 omergerequests() {
   project_relative_path=`ls ${PROJECTS_PATH} | fzf`
 
-  open https://gitlab.com/connectiscom/myconnectis-ng/${project_relative_path}/-/merge_requests
+  open https://gitlab.com/signicat/orange-stack/self-service/${project_relative_path}/-/merge_requests
 }
 
 #kubectl -n myc get pods
@@ -108,8 +113,26 @@ docker-cleanup() {
   echo "Stopping.. " && docker stop $(docker ps -a -q) && echo "Removing.. " && docker rm $(docker ps -a -q)
 }
 
+dc() {
+  docker-cleanup
+}
+
 dockerrebuild() {
-    sudo docker-compose up -d --force-recreate --no-deps --build $1
+  if [ -z "$1" ];
+  then
+    echo "Please specify a container"
+    return
+  fi
+    USER="$(id -u)" GROUP="$GROUP_ID" docker-compose \
+        -f ./infra/docker-compose/local/docker-compose.external.yml \
+        -f ./infra/docker-compose/local/docker-compose.ciam.yml \
+        -f ./infra/docker-compose/local/docker-compose.broker.yml \
+        -f ./infra/docker-compose/local/docker-compose.internal.yml \
+        -f ./infra/docker-compose/local/docker-compose.ema.yml \
+        -f ./infra/docker-compose/local/docker-compose.cms.yml \
+        -f ./infra/docker-compose/local/docker-compose.fe.yml \
+        -f ./infra/docker-compose/local/docker-compose.opa.yml \
+        up -d --build --force-recreate --no-deps $1
 }
 
 killport() {
@@ -120,3 +143,17 @@ killport() {
 # install tilix, sublime, fix shortcuts
 #
 
+showclip() {
+  xclip -selection clipboard -o
+}
+
+
+pullsecrets() {
+    python3 ~/projects/automation/scripts/gitlab_secrets/secrets_mgmt.py -p
+}
+
+updatesecrets() {
+    python3 ~/projects/automation/scripts/gitlab_secrets/secrets_mgmt.py -u $1
+}
+
+# wireguard port 51820/ pass gamingpass123
