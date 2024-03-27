@@ -2,7 +2,8 @@
 # constants
 export PROJECTS_PATH=$HOME'/projects'
 export GITLAB_BASE_URL='https://gitlab.com/signicat/orange-stack/self-service/my-signicat/-/tree/'
-export IDEA_PATH=$HOME'/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0/212.5457.46/bin/'
+export IDEA_PATH=$HOME'/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0/233.14475.28/bin/'
+
 
 #common
 alias yankpwd='echo `pwd` | head -c-1 | xclip -sel clip'
@@ -18,23 +19,6 @@ alias mvnd='mvn dependency:tree | gedit -'
 #install
 alias installfzf='rm -rf ~/.fzf && git clone https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install'
 
-#git
-alias gitadd='git add . --all'
-alias gitpush='git push'
-alias gitpushgitorious='git push gitorious --all'
-alias gitpushgitlab='git push gitlab --all'
-alias gitpushgithub='git push github --all'
-alias gitstatus='git status'
-alias gitresethardgitcleanfd='git reset --hard && git clean -f -d'
-alias gitremotev='git remote -v'
-alias gitlogallgraphonelindecoratesource='git log --all --graph --oneline --decorate --source'
-alias gitinit='git init'
-alias gitcheckoutmaster='git checkout master'
-alias gitpushall='for remote in `git remote|grep -E lab\|hub\|origin`; do git push $remote --all; git push $remote --tags; done'
-alias gitpullall='git pull --all'
-alias gitbranch='git branch'
-alias gitbrancha='git branch -a'
-alias gitdiffcachedpatch='git diff --cached > ~/patch.txt'
 function gitcleanlocal() {
     git branch -vv | grep 'origin/.*: gone]' | awk '{print $1}' | xargs git branch -D
 }
@@ -49,20 +33,26 @@ function vpnup() {
   echo "vpn.secrets.password:$LDAP_PASS$tokenVar" > /tmp/vpn-pass
   nmcli con up id dc01 passwd-file /tmp/vpn-pass
 }
-#build
-alias fbuild='(cd $FEDERATION_PATH; mvnc)'
 
-#funny
-yolo() {
+# funny
+function yoloc() {
   git commit -m "$(curl http://whatthecommit.com/index.txt)" > /dev/null;
 }
 
+
+function yolom() {
+  r_message=$(curl -s http://whatthecommit.com/index.txt)
+  echo -n "$r_message" | xclip -selection c
+
+  echo "'${r_message}' copied to clipboard: $PUBLIC_IP"
+}
 #open
 
 alias omessenger='open http://messenger.com'
 alias owhatsapp='open https://web.whatsapp.com'
+alias ogitflux='open https://gitlab.com/signicat/orange-stack/self-service'
 
-obranch() {
+function obranch() {
     project_relative_path=`ls ${PROJECTS_PATH} | fzf`
     project_absolute_path=${PROJECTS_PATH}/${project_relative_path}
     branch_name=`getbranchname ${project_absolute_path}`
@@ -70,23 +60,19 @@ obranch() {
     open ${gitlab_url}
 }
 
-omergerequests() {
+function omergerequests() {
   project_relative_path=`ls ${PROJECTS_PATH} | fzf`
 
   open https://gitlab.com/signicat/orange-stack/self-service/${project_relative_path}/-/merge_requests
 }
 
-#kubectl -n myc get pods
-#kubectl -n myc logs -f <pod-name>
-
-
-ointellij() {
+function ointellij() {
     project_relative_path=`ls ${PROJECTS_PATH} | fzf`
     project_absolute_path=${PROJECTS_PATH}/${project_relative_path}
     ${IDEA_PATH}/idea.sh ${project_absolute_path} > /dev/null
 }
 
-gitcheckout() {
+function gitcheckout() {
     project_relative_path=`ls ${PROJECTS_PATH} | fzf`
     project_absolute_path=${PROJECTS_PATH}/${project_relative_path}
     branch_name=`getallbranches ${project_absolute_path}`
@@ -117,23 +103,6 @@ dc() {
   docker-cleanup
 }
 
-dockerrebuild() {
-  if [ -z "$1" ];
-  then
-    echo "Please specify a container"
-    return
-  fi
-    USER="$(id -u)" GROUP="$GROUP_ID" docker-compose \
-        -f ./infra/docker-compose/local/docker-compose.external.yml \
-        -f ./infra/docker-compose/local/docker-compose.ciam.yml \
-        -f ./infra/docker-compose/local/docker-compose.broker.yml \
-        -f ./infra/docker-compose/local/docker-compose.internal.yml \
-        -f ./infra/docker-compose/local/docker-compose.ema.yml \
-        -f ./infra/docker-compose/local/docker-compose.cms.yml \
-        -f ./infra/docker-compose/local/docker-compose.fe.yml \
-        -f ./infra/docker-compose/local/docker-compose.opa.yml \
-        up -d --build --force-recreate --no-deps $1
-}
 
 killport() {
  sudo kill -9 `sudo lsof -t -i:$1`
@@ -143,7 +112,8 @@ killport() {
 # install tilix, sublime, fix shortcuts
 #
 
-showclip() {
+# show clipboard
+function showclip() {
   xclip -selection clipboard -o
 }
 
@@ -155,3 +125,43 @@ pullsecrets() {
 updatesecrets() {
     python3 ~/projects/automation/scripts/gitlab_secrets/secrets_mgmt.py -u $1
 }
+
+ogitpipeline() {
+    if [ -z "$GITLAB_URL" ];
+    then
+      echo "Please specify GITLAB_URL env var"
+      return
+    fi
+    if [ -z "$GITLAB_URL" ];
+    then
+      echo "Please specify GITLAB_URL env var"
+      return
+    fi
+    if [ -z "$GITLAB_PRIVATE_TOKEN" ];
+    then
+      echo "Please specify GITLAB_URL env var"
+      return
+    fi
+}
+
+myip() {
+  PUBLIC_IP=$(curl -s https://api.ipify.org)
+
+  # Check if xclip is installed
+  if ! command -v xclip &> /dev/null; then
+      echo "xclip is not installed. Please install it."
+      return
+  fi
+
+  # Copy public IP address to clipboard
+  echo -n "$PUBLIC_IP" | xclip -selection c
+
+  echo "Public IP address copied to clipboard: $PUBLIC_IP"
+}
+
+# Function to greet the user
+function greet_user {
+    echo "Hello, $USER!"
+}
+
+

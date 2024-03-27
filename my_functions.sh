@@ -247,3 +247,45 @@ insert_sudo () { zle beginning-of-line; zle -U "sudo " }
 zle -N insert-sudo insert_sudo
 bindkey "^[s" insert-sudo
 
+list_functions_aliases() {
+    local file="$1"
+    if [ -z "$file" ]; then
+        echo "Usage: list_functions_aliases <shell_file>"
+        return 1
+    fi
+
+    if [ ! -f "$file" ]; then
+        echo "Error: File '$file' does not exist."
+        return 1
+    fi
+
+    echo "Functions:"
+    grep '^function ' "$file" | sed 's/^function \([^ ]*\) .*/\1/'
+
+    echo "Aliases:"
+    grep '^alias ' "$file" | sed 's/^alias \([^=]*\)=.*/\1/'
+}
+
+list_functions_aliases_with_comments() {
+    local file="$1"
+    if [ -z "$file" ]; then
+        echo "Usage: list_functions_aliases_with_comments <shell_file>"
+        return 1
+    fi
+
+    if [ ! -f "$file" ]; then
+        echo "Error: File '$file' does not exist."
+        return 1
+    fi
+
+    echo "Functions:"
+    awk '/^function / { name = $2; getline; if ($0 ~ /^#/) { comment = substr($0, 2); } else { comment = ""; } print "- " name " : " comment }' "$file"
+
+    echo "Aliases:"
+    awk '/^alias / { name = $2; getline; if ($0 ~ /^#/) { comment = substr($0, 2); } else { comment = ""; } print "- " name " : " comment }' "$file"
+}
+
+
+dothelp() {
+  list_functions_aliases_with_comments $HOME'/.my_aliases.sh'
+}
