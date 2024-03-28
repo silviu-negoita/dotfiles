@@ -289,3 +289,107 @@ list_functions_aliases_with_comments() {
 dothelp() {
   list_functions_aliases_with_comments $HOME'/.my_aliases.sh'
 }
+
+get_env_var_value() {
+  local namespace=dashboard-1
+  local app=$1  # Use the app parameter passed to the function
+  # Get dbIp and redisIp using kubectl commands
+  dbIp=$(kubectl get configmap -n "$namespace" postgresql-cmek-"$app" -o jsonpath='{.data.DATABASE_HOST}')
+  redisIp=$(kubectl get configmap -n "$namespace" redis -o jsonpath='{.data.REDIS_HOST}')
+
+  # Format into YAML
+  yaml=$(cat <<EOF
+
+egress:
+  dbIp: $dbIp
+  redisIp: $redisIp
+  dnsHosts:
+    - api.signicat.com
+EOF
+  )
+
+  echo "$yaml"
+  echo ""
+}
+
+write_to_file() {
+  app=$1
+  file_path=$2
+
+  # Check if file contains 'egress'
+  if ! grep -q 'egress' "$file_path"; then
+    # Append the output of the function to the end of the file
+    get_env_var_value "$app" >> "$file_path"
+    echo "written to $file_path"
+  fi
+}
+function givemedata() {
+  local env="dev"
+#echo "ncs"
+#write_to_file "ncs" /home/silviun/projects/notification-center-service/infra/helm-values/$env.yaml
+#
+#echo "oapi"
+#write_to_file "oapi" /home/silviun/projects/octopus/infra/helm-values/$env.yaml
+#
+#echo "theming"
+#write_to_file "theming" /home/silviun/projects/theming-api/infra/helm-values/$env.yaml
+#
+#echo "storefront"
+#write_to_file "storefront" /home/silviun/projects/storefront/infra/helm-values/$env.yaml
+#
+#echo "pay-api"
+#write_to_file "pay-api" /home/silviun/projects/payment-api/infra/helm-values/$env.yaml
+
+#echo "dashboard-svc"
+#write_to_file "dashboard-svc" /home/silviun/projects/dashboard-service/infra/helm-values/$env.yaml
+}
+
+
+gitlab_projects=("storefront" "dashboard-service" "octopus" "notification-center-service" "theming-api" "payment-api" "td1-mfes" "automation" )
+
+transform_string() {
+    input_string="$1"
+
+    # Replace "-" with space and capitalize each word
+    transformed_string=$(echo "$input_string" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1')
+
+    echo "$transformed_string"
+}
+
+function show_gitlab_project_info() {
+
+  local app=$1
+  # GitLab API URL
+  API_URL="https://gitlab.com/api/v4/projects/signicat%2Forange-stack%2Fself-service%2F$app/pipelines"
+
+  # GitLab Private Token
+  PRIVATE_TOKEN="$GITLAB_PRIVATE_TOKEN"
+
+  # Fetching pipeline information with authentication
+  response=$(curl -s --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "$API_URL")
+  # Parsing JSON to get the latest pipeline URL
+  latest_pipeline_url=$(echo "$response" | jq -r '.[0].web_url')
+
+  # Output the latest pipeline URL
+  echo "Project:             https://gitlab.com/signicat/orange-stack/self-service/$app"
+  echo "Latest pipeline URL: $latest_pipeline_url"
+  echo "Merge Requests:      https://gitlab.com/signicat/orange-stack/self-service/$app/-/merge_requests"
+  echo ""
+}
+
+
+oallgitprojectinfos() {
+ for project in "${gitlab_projects[@]}"; do
+     transformed_project=$(transform_string "$project")
+     echo "$transformed_project"
+     show_gitlab_project_info $project
+ done
+}
+
+function ogitprojectinfo() {
+  selected_project=$(printf "%s\n" "${gitlab_projects[@]}" | fzf --prompt="Select a project: ")
+  transformed_project=$(transform_string "$selected_project")
+  echo $transformed_project
+  show_gitlab_project_info $selected_project
+}
+
