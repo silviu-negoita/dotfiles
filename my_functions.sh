@@ -376,6 +376,23 @@ function show_gitlab_project_info() {
   echo "Merge Requests:      https://gitlab.com/signicat/orange-stack/self-service/$app/-/merge_requests"
   echo ""
 }
+function show_gitlab_latest_pipeline() {
+
+  local app=$1
+  # GitLab API URL
+  API_URL="https://gitlab.com/api/v4/projects/signicat%2Forange-stack%2Fself-service%2F$app/pipelines"
+
+  # GitLab Private Token
+  PRIVATE_TOKEN="$GITLAB_PRIVATE_TOKEN"
+
+  # Fetching pipeline information with authentication
+  response=$(curl -s --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "$API_URL")
+  # Parsing JSON to get the latest pipeline URL
+  latest_pipeline_url=$(echo "$response" | jq -r '.[0].web_url')
+
+  # Output the latest pipeline URL
+  echo "$latest_pipeline_url"
+}
 
 
 oallgitprojectinfos() {
@@ -385,11 +402,40 @@ oallgitprojectinfos() {
      show_gitlab_project_info $project
  done
 }
+oallgitprojectlatestpipelines() {
+ for project in "${gitlab_projects[@]}"; do
+     transformed_project=$(transform_string "$project")
+     latest_pipeline=$(show_gitlab_latest_pipeline "$project")
+     echo "$transformed_project - $latest_pipeline"
+ done
+}
 
 function ogitprojectinfo() {
   selected_project=$(printf "%s\n" "${gitlab_projects[@]}" | fzf --prompt="Select a project: ")
   transformed_project=$(transform_string "$selected_project")
   echo $transformed_project
   show_gitlab_project_info $selected_project
+}
+
+function createfile() {
+  # Check if the user provided the filename and size as arguments
+  if [ $# -ne 2 ]; then
+      echo "Usage: $0 <filename> <size>"
+      exit 1
+  fi
+
+  # Extract arguments
+  filename=$1
+  size=$2
+
+  # Use dd to create the file with the specified size
+  dd if=/dev/zero of="$filename" bs=1 count="$size" 2>/dev/null
+
+  # Check if the file was created successfully
+  if [ $? -eq 0 ]; then
+      echo "File $filename created successfully with size $size bytes."
+  else
+      echo "Failed to create file $filename."
+  fi
 }
 
