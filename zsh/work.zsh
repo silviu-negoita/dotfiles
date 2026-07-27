@@ -34,9 +34,9 @@ mvn-settings() {
 alias mvnsy='mvn-settings y'
 alias mvnsd='mvn-settings d'
 
-alias homelab-pi='ssh silviun@homelab-pi'
-alias homelab-green='ssh silviun@hass.green.silviun.net'
-alias homelab-main='ssh silviun@homelab-main'
+alias hl-pi='ssh silviun@homelab-pi'
+alias hl-green='ssh silviun@hass.green.silviun.net'
+alias hl-main='ssh silviun@homelab-main'
 
 _pitemp_read_temperature() {
   if command -v vcgencmd >/dev/null 2>&1; then
@@ -116,6 +116,118 @@ while :; do
   fi
   sleep "$PI_TEMP_INTERVAL" || exit 1
 done
+REMOTE
+}
+
+_pistatus_snapshot() {
+  local host_name kernel_name uptime_text load_average temperature throttling
+  local memory_usage disk_usage addresses
+
+  host_name="$(hostname 2>/dev/null)"
+  kernel_name="$(uname -srmo 2>/dev/null || uname -a)"
+  uptime_text="$(uptime -p 2>/dev/null || uptime)"
+  if [[ -r /proc/loadavg ]]; then
+    load_average="$(awk '{print $1, $2, $3}' /proc/loadavg)"
+  else
+    load_average="unavailable"
+  fi
+  temperature="$(_pitemp_read_temperature 2>/dev/null || print unavailable)"
+
+  if command -v vcgencmd >/dev/null 2>&1; then
+    throttling="$(vcgencmd get_throttled 2>/dev/null)"
+    if [[ "$throttling" == "throttled=0x0" ]]; then
+      throttling="OK ($throttling)"
+    else
+      throttling="WARNING (${throttling:-unknown})"
+    fi
+  else
+    throttling="unavailable"
+  fi
+
+  if command -v free >/dev/null 2>&1; then
+    memory_usage="$(free -h | awk '/^Mem:/ {print $3 " / " $2}')"
+  else
+    memory_usage="unavailable"
+  fi
+  disk_usage="$(df -h / | awk 'NR == 2 {print $3 " / " $2 " (" $5 ")"}')"
+  addresses="$(hostname -I 2>/dev/null | awk '{$1=$1; print}')" ||
+    addresses=""
+  [[ -n "$addresses" ]] || addresses="unavailable"
+
+  print "Raspberry Pi status"
+  printf '%-13s %s\n' "Host:" "${host_name:-unknown}"
+  printf '%-13s %s\n' "Kernel:" "${kernel_name:-unknown}"
+  printf '%-13s %s\n' "Uptime:" "${uptime_text:-unknown}"
+  printf '%-13s %s\n' "Load:" "$load_average"
+  printf '%-13s %s\n' "Temperature:" "$temperature"
+  printf '%-13s %s\n' "Throttling:" "$throttling"
+  printf '%-13s %s\n' "Memory:" "$memory_usage"
+  printf '%-13s %s\n' "Disk /:" "${disk_usage:-unavailable}"
+  printf '%-13s %s\n' "IP:" "$addresses"
+}
+
+pistatus() {
+  if (( $# > 1 )); then
+    print -u2 "Usage: pistatus [local|ssh-host]"
+    return 2
+  fi
+
+  local requested="${1:-}" host="${PI_TEMP_HOST:-silviun@homelab-pi}"
+  if [[ "$requested" == "local" ]] ||
+     { [[ -z "$requested" ]] &&
+       { command -v vcgencmd >/dev/null 2>&1 ||
+         [[ -r /sys/class/thermal/thermal_zone0/temp ]]; }; }; then
+    _pistatus_snapshot
+    return
+  fi
+
+  [[ -n "$requested" ]] && host="$requested"
+  ssh "$host" 'sh -s' <<'REMOTE'
+host_name=$(hostname 2>/dev/null)
+kernel_name=$(uname -srmo 2>/dev/null || uname -a)
+uptime_text=$(uptime -p 2>/dev/null || uptime)
+if [ -r /proc/loadavg ]; then
+  load_average=$(awk '{print $1, $2, $3}' /proc/loadavg)
+else
+  load_average=unavailable
+fi
+
+if command -v vcgencmd >/dev/null 2>&1; then
+  temperature=$(vcgencmd measure_temp 2>/dev/null)
+  throttling=$(vcgencmd get_throttled 2>/dev/null)
+  if [ "$throttling" = "throttled=0x0" ]; then
+    throttling="OK ($throttling)"
+  else
+    throttling="WARNING (${throttling:-unknown})"
+  fi
+elif [ -r /sys/class/thermal/thermal_zone0/temp ]; then
+  temperature=$(awk '{printf "temp=%.1f°C", $1 / 1000}' \
+    /sys/class/thermal/thermal_zone0/temp)
+  throttling=unavailable
+else
+  temperature=unavailable
+  throttling=unavailable
+fi
+
+if command -v free >/dev/null 2>&1; then
+  memory_usage=$(free -h | awk '/^Mem:/ {print $3 " / " $2}')
+else
+  memory_usage=unavailable
+fi
+disk_usage=$(df -h / | awk 'NR == 2 {print $3 " / " $2 " (" $5 ")"}')
+addresses=$(hostname -I 2>/dev/null | awk '{$1=$1; print}')
+[ -n "$addresses" ] || addresses=unavailable
+
+printf '%s\n' "Raspberry Pi status"
+printf '%-13s %s\n' "Host:" "${host_name:-unknown}"
+printf '%-13s %s\n' "Kernel:" "${kernel_name:-unknown}"
+printf '%-13s %s\n' "Uptime:" "${uptime_text:-unknown}"
+printf '%-13s %s\n' "Load:" "$load_average"
+printf '%-13s %s\n' "Temperature:" "$temperature"
+printf '%-13s %s\n' "Throttling:" "$throttling"
+printf '%-13s %s\n' "Memory:" "$memory_usage"
+printf '%-13s %s\n' "Disk /:" "${disk_usage:-unavailable}"
+printf '%-13s %s\n' "IP:" "$addresses"
 REMOTE
 }
 

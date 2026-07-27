@@ -7,7 +7,7 @@
 typeset _dotfiles_zsh_directory="${${(%):-%N}:A:h}"
 typeset -g DOTFILES_DIR="${_dotfiles_zsh_directory:h}"
 
-for _dotfiles_module in core git docker work; do
+for _dotfiles_module in core git docker kubernetes work; do
   source "$_dotfiles_zsh_directory/${_dotfiles_module}.zsh" || return 1
 done
 

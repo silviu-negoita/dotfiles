@@ -45,6 +45,24 @@ myip() {
   print "Public IP address copied to clipboard: $public_ip"
 }
 
+netspeed() {
+  local speedtest_binary
+  if command -v networkQuality >/dev/null 2>&1; then
+    networkQuality "$@"
+  elif speedtest_binary="$(whence -p speedtest 2>/dev/null)" &&
+       [[ -n "$speedtest_binary" ]]; then
+    "$speedtest_binary" "$@"
+  elif speedtest_binary="$(whence -p speedtest-cli 2>/dev/null)" &&
+       [[ -n "$speedtest_binary" ]]; then
+    "$speedtest_binary" "$@"
+  else
+    print -u2 "No speed-test tool found (networkQuality, speedtest, or speedtest-cli)."
+    return 1
+  fi
+}
+
+alias speedtest='netspeed'
+
 open_url() {
   if [[ "$OSTYPE" == darwin* ]]; then
     command open "$@"
@@ -165,6 +183,34 @@ yolom() {
   print "'${random_message}' copied to clipboard."
 }
 
+aliashelp() {
+  command cat <<'EOF'
+Aliasuri shell:
+  mvnc              Maven clean install, fără teste
+  mvni              Maven install, fără clean și fără teste
+  mvnsy / mvnsd     activează setările Maven Yellow / default
+  hl-pi             SSH pe Raspberry Pi
+  hl-green          SSH pe Home Assistant Green
+  hl-main           SSH pe serverul homelab principal
+  java21 / java25   selectează rapid versiunea de Java pe macOS
+  yvpn              pornește serviciul și conexiunea NetBird
+  dobuild           construiește imaginea Docker din directorul curent
+  doimages          listează imaginile Docker
+  dops / dopsa      listează containerele active / toate containerele
+  gitcleanremote    elimină referințele remote Git dispărute
+  speedtest         testează rapid viteza conexiunii
+
+Aliasuri Git (folosește `git <alias>`):
+  git co            checkout
+  git sw            switch
+  git rs            restore
+  git st            status scurt, cu branch
+  git lg            istoric compact sub formă de graf
+
+Pentru expandarea exactă a unui alias shell: alias <nume>
+EOF
+}
+
 dothelp() {
   command cat <<'EOF'
 Navigation:
@@ -174,6 +220,7 @@ Navigation:
 
 Shell:
   dotedit                    edit the managed Zsh modules
+  aliashelp                  explain the managed aliases
   reloadshell                replace the current login shell
   yankpwd / showclip / myip  clipboard helpers
   fkill [signal]             select processes and sudo kill (defaults to -9)
@@ -201,6 +248,9 @@ Work:
   java21 / java25            common JDK selections
   yvpn                       start and connect NetBird
   pitemp [host] [seconds]    monitor Raspberry Pi temperature
+  pistatus [host]            show Raspberry Pi health
+  kwhere                     show Kubernetes context and namespace
+  kuse [context] [namespace] safely switch Kubernetes target
 EOF
 }
 

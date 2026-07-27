@@ -58,6 +58,7 @@ The maintained shell configuration lives in four focused modules:
 - `zsh/core.zsh` — navigation, clipboard, process, and shell helpers;
 - `zsh/git.zsh` — Git cleanup and `fzf` selectors;
 - `zsh/docker.zsh` — the small Docker command set;
+- `zsh/kubernetes.zsh` — context and namespace inspection and selection;
 - `zsh/work.zsh` — Maven, Java, GitLab, VPN, and homelab helpers.
 
 The installer links the directory as `~/.zsh`. It also retains
@@ -67,7 +68,11 @@ instead.
 
 Run `dothelp` for the concise command reference. The most frequently used
 compatibility names (`mvnc`, `mvnsy`, `mvnsd`, `dc`, and `gitcleanremote`) are
-preserved.
+preserved. Run `aliashelp` for a short explanation of every shell and Git alias
+managed by this repository.
+
+`speedtest` runs macOS `networkQuality`, Ookla `speedtest`, or
+`speedtest-cli`, using the first available implementation.
 
 ### Destructive helpers
 
@@ -90,6 +95,13 @@ hard-coded GitLab project helpers. It uses the repository's `origin` and
 `pitemp` monitors the temperature of `silviun@homelab-pi` once per second.
 Use `pitemp <host> <seconds>` for another Raspberry Pi, set `PI_TEMP_HOST` in
 `~/.zshrc.local` to change the default, or run `pitemp local` directly on a Pi.
+`pistatus` uses the same host and reports temperature, throttling, uptime, load,
+memory, disk usage, IP addresses, and kernel information.
+
+`kwhere` prints the active Kubernetes context, cluster, namespace, and API
+server. `kuse [context] [namespace]` validates both targets before changing the
+kubeconfig; interactive selection uses `fzf`, and production-like context
+names require typing `prod` before the switch.
 
 `tagversions` is installed from `scripts/`. The old `rbates` plugin path is
 kept as a compatibility shim for existing installations, but no longer
