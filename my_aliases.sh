@@ -43,21 +43,11 @@ mvnd() {
   mvn dependency:tree | "${PAGER:-less}"
 }
 
-alias fan-turbo='cd /sys/devices/platform/asus-nb-wmi; sudo sh -c "echo 1 >> throttle_thermal_policy"; source ~/.zshrc; cd ~;'
-alias fan-performance='cd /sys/devices/platform/asus-nb-wmi; sudo sh -c "echo 0 >> throttle_thermal_policy"; source ~/.zshrc; cd ~;'
-alias fan-silent='cd /sys/devices/platform/asus-nb-wmi; sudo sh -c "echo 2 >> throttle_thermal_policy"; source ~/.zshrc; cd ~;'
-alias gpu-intel='sudo prime-select intel; echo "Now restart your cazan, you bastard! Be aware external monitor will not work!!!!!"'
-alias gpu-nvidia='sudo prime-select on-demand; echo "Now restart your cazan, you bastard!"'
 
 
-alias pimaster='ssh silviun@pimaster'
-alias pigreen='ssh silviun@hass.green.silviun.net'
-alias pimasterremote='ssh silviun@silviun-home.go.ro'
-
-alias mysql-tunnel-sesam-dev='ssh mysql_tunnel@10.55.26.250 -L 33060:10.55.26.21:30108 -N'
-alias mysql-tunnel-sesam-rct='ssh mysql_tunnel@10.55.5.250 -L 33061:10.55.5.21:30108 -N'
-alias mysql-tunnel-sesam-rct2='ssh mysql_tunnel@10.55.16.250 -L 33062:10.55.16.21:30108 -N'
-alias mysql-tunnel-sesam-live='ssh mysql_tunnel@10.55.6.250 -L 33063:10.55.6.21:30108 -N'
+alias homelab-pi='ssh silviun@homelab-pi'
+alias homelab-green='ssh silviun@hass.green.silviun.net'
+alias homelab-main='ssh silviun@homelab-main'
 
 alias java21='export JAVA_HOME=$(/usr/libexec/java_home -v 21)'
 alias java25='export JAVA_HOME=$(/usr/libexec/java_home -v 25)'
@@ -82,26 +72,6 @@ gitcleanlocal() {
   (( ${#branches} )) && git branch -D -- "${branches[@]}"
 }
 alias gitcleanremote='git remote prune origin'
-
-#vpn
-alias dc01='nmcli con up id dc01 --ask || nmcli con down id dc01'
-
-vpnup() {
-  local token_var password_file
-  print "Please insert token value below"
-  read -rs token_var
-  print
-
-  password_file="$(mktemp "${TMPDIR:-/tmp}/vpn-pass.XXXXXX")" || return 1
-  chmod 600 "$password_file"
-  trap 'rm -f "$password_file"' EXIT INT TERM
-  print -r -- "vpn.secrets.password:${LDAP_PASS:-}${token_var}" > "$password_file"
-  nmcli con up id dc01 passwd-file "$password_file"
-  local status=$?
-  rm -f "$password_file"
-  trap - EXIT INT TERM
-  return "$status"
-}
 
 # funny
 yoloc() {
@@ -145,42 +115,6 @@ omergerequests() {
   open "https://gitlab.com/signicat/orange-stack/self-service/${project_relative_path}/-/merge_requests"
 }
 
-ointellij() {
-  local project_relative_path project_absolute_path
-  project_relative_path="$(find "$PROJECTS_PATH" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | fzf)" ||
-    return 1
-  [[ -n "$project_relative_path" ]] || return 1
-  project_absolute_path="$PROJECTS_PATH/$project_relative_path"
-
-  if command -v idea >/dev/null 2>&1; then
-    idea "$project_absolute_path" >/dev/null 2>&1 &
-  elif [[ -x "$IDEA_PATH/idea.sh" ]]; then
-    "$IDEA_PATH/idea.sh" "$project_absolute_path" >/dev/null 2>&1 &
-  elif [[ "$OSTYPE" == darwin* ]]; then
-    command open -a "IntelliJ IDEA" "$project_absolute_path"
-  else
-    print -u2 "IntelliJ IDEA launcher not found; set IDEA_PATH in ~/.zshrc.local."
-    return 1
-  fi
-}
-
-gitcheckout() {
-  local project_relative_path project_absolute_path branch_name local_branch
-  project_relative_path="$(find "$PROJECTS_PATH" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | fzf)" ||
-    return 1
-  [[ -n "$project_relative_path" ]] || return 1
-  project_absolute_path="$PROJECTS_PATH/$project_relative_path"
-  branch_name="$(getallbranches "$project_absolute_path")" || return 1
-  [[ -n "$branch_name" ]] || return 1
-  local_branch="${branch_name#origin/}"
-
-  if git -C "$project_absolute_path" show-ref --verify --quiet "refs/heads/$local_branch"; then
-    git -C "$project_absolute_path" switch "$local_branch"
-  else
-    git -C "$project_absolute_path" switch --create "$local_branch" --track "$branch_name"
-  fi
-  print "Checked out $local_branch in $project_absolute_path"
-}
 
 dl() {
   docker logs -f "$1"
@@ -239,13 +173,6 @@ showclip() {
 }
 
 
-pullsecrets() {
-  python3 "$PROJECTS_PATH/automation/scripts/gitlab_secrets/secrets_mgmt.py" -p
-}
-
-updatesecrets() {
-  python3 "$PROJECTS_PATH/automation/scripts/gitlab_secrets/secrets_mgmt.py" -u "$1"
-}
 
 ogitpipeline() {
   if [[ -z "${GITLAB_URL:-}" ]]; then
@@ -275,28 +202,3 @@ greet_user() {
 
 alias yvpn='netbird service start && netbird up'
 
-alias ytunnel-awsprod='ssh -L 8443:FFDFCF7D2956B10DF7ACC36F3B97BC9C.gr7.eu-west-1.eks.amazonaws.com:443 silneg@10.4.185.97 -N'
-alias yssh-awsprod='ssh silneg@10.4.185.97'
-
-alias yssh-m1='ssh silneg@10.241.0.5'
-alias ytunnel-m1='ssh -L 7443:eid-southeastasia-prod-dns-60e52707.4f8a35aa-c4bc-4dfe-885c-9e0ac2e281d5.privatelink.southeastasia.azmk8s.io:443 silneg@10.241.0.5 -N'
-
-alias yssh-santander='ssh silneg@10.34.8.241'
-alias ytunnel-santander='ssh -L 9443:D6F2EB52FD37CAF6BE5FF13FA87DF22F.gr7.eu-west-1.eks.amazonaws.com:443 silneg@10.34.8.241 -N'
-
-
-alias yssh-devstaging='ssh silneg@52.209.4.175'
-alias ytunnel-devstaging='ssh -L 6443:E32F4804027CB96FE51242A0E1909AFE.sk1.eu-west-1.eks.amazonaws.com:443 silneg@52.209.4.175 -N'
-
-
-alias yssh-carrefour='ssh silneg@172.18.64.4'
-alias ytunnel-carrefour='ssh -L 8443:eid-carrefour-prod-dns-3800287e.e5274f6c-4f1e-436d-a734-6bfd498c4ce9.privatelink.westeurope.azmk8s.io:443 silneg@172.18.64.4 -N'
-
-
-alias yssh-sesam-rct='ssh user@10.55.5.250'
-alias yssh-sesam-rct2='ssh user@10.55.16.250'
-alias yssh-sesam-dev='ssh user@10.55.26.250'
-alias yssh-sesam-prod='ssh user@10.55.6.250'
-
-alias yssh-xfr-live='ssh silneg@10.226.2.18'
-alias yssh-tec='ssh silneg@10.226.2.18'
