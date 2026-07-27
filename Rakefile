@@ -1,97 +1,43 @@
-require 'rake'
-require 'erb'
+require "rake"
+require "rake/testtask"
 
-desc "install the dot files into user's home directory"
+require_relative "lib/dotfiles/installer"
+
+desc "Install the managed dotfiles into the current user's home directory"
 task :install do
-  install_oh_my_zsh
-  install_custom_plugins
-  switch_to_zsh
-  replace_all = false
-  files = Dir['*'] - %w[Rakefile README.rdoc LICENSE oh-my-zsh]
-  files << "oh-my-zsh/custom/plugins/rbates"
-  files << "oh-my-zsh/custom/rbates.zsh-theme"
-  files.each do |file|
-    system %Q{mkdir -p "$HOME/.#{File.dirname(file)}"} if file =~ /\//
-    if File.exist?(File.join(ENV['HOME'], ".#{file.sub(/\.erb$/, '')}"))
-      if File.identical? file, File.join(ENV['HOME'], ".#{file.sub(/\.erb$/, '')}")
-        puts "identical ~/.#{file.sub(/\.erb$/, '')}"
-      elsif replace_all
-        replace_file(file)
-      else
-        print "overwrite ~/.#{file.sub(/\.erb$/, '')}? [ynaq] "
-        case $stdin.gets.chomp
-        when 'a'
-          replace_all = true
-          replace_file(file)
-        when 'y'
-          replace_file(file)
-        when 'q'
-          exit
-        else
-          puts "skipping ~/.#{file.sub(/\.erb$/, '')}"
-        end
-      end
-    else
-      link_file(file)
-    end
-  end
+  Dotfiles::Installer.new.install
 end
 
-def replace_file(file)
-  system %Q{rm -rf "$HOME/.#{file.sub(/\.erb$/, '')}"}
-  link_file(file)
+desc "Check required tools, source files, and installed dotfile status"
+task :doctor do
+  abort "Dotfiles doctor found blocking issues." unless Dotfiles::Installer.new.doctor
 end
 
-def link_file(file)
-  if file =~ /.erb$/
-    puts "generating ~/.#{file.sub(/\.erb$/, '')}"
-    File.open(File.join(ENV['HOME'], ".#{file.sub(/\.erb$/, '')}"), 'w') do |new_file|
-      new_file.write ERB.new(File.read(file)).result(binding)
-    end
-  elsif file =~ /zshrc$/ # copy zshrc instead of link
-    puts "copying ~/.#{file}"
-    system %Q{cp "$PWD/#{file}" "$HOME/.#{file}"}
-  else
-    puts "linking ~/.#{file}"
-    system %Q{ln -s "$PWD/#{file}" "$HOME/.#{file}"}
-  end
+Rake::TestTask.new(:test) do |task|
+  task.libs << "test"
+  task.pattern = "test/**/*_test.rb"
+  task.warning = true
 end
 
-def install_custom_plugins
-  system %Q{git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions }
-  system %Q{git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting}
+desc "Validate Ruby, shell, and Vim configuration syntax"
+task :syntax do
+  sh "ruby", "-c", "Rakefile"
+  sh "ruby", "-c", "irbrc"
+  sh "ruby", "-c", "oh-my-zsh/custom/plugins/rbates/bin/tagversions"
+  sh "zsh", "-n",
+     "zshrc",
+     "my_aliases.sh",
+     "my_functions.sh",
+     "oh-my-zsh/custom/plugins/rbates/rbates.plugin.zsh",
+     "oh-my-zsh/custom/rbates.zsh-theme"
+  sh "zsh", "test/shell_smoke.zsh"
+  sh "bash", "-n", "workstation_setup.sh", "scripts/commit_message.sh"
+  sh({ "DOTFILES_SKIP_LOCAL" => "1" },
+     "vim", "-Nu", File.expand_path("vimrc", __dir__),
+     "-n", "-i", "NONE", "-es", "+qa!")
 end
 
-def switch_to_zsh
-  if ENV["SHELL"] =~ /zsh/
-    puts "using zsh"
-  else
-    print "switch to zsh? (recommended) [ynq] "
-    case $stdin.gets.chomp
-    when 'y'
-      puts "switching to zsh"
-      system %Q{chsh -s `which zsh`}
-    when 'q'
-      exit
-    else
-      puts "skipping zsh"
-    end
-  end
-end
+desc "Run the complete local validation suite"
+task check: %i[test syntax]
 
-def install_oh_my_zsh
-  if File.exist?(File.join(ENV['HOME'], ".oh-my-zsh"))
-    puts "found ~/.oh-my-zsh"
-  else
-    print "install oh-my-zsh? [ynq] "
-    case $stdin.gets.chomp
-    when 'y'
-      puts "installing oh-my-zsh"
-      system %Q{git clone https://github.com/robbyrussell/oh-my-zsh.git "$HOME/.oh-my-zsh"}
-    when 'q'
-      exit
-    else
-      puts "skipping oh-my-zsh, you will need to change ~/.zshrc"
-    end
-  end
-end
+task default: :check

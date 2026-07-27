@@ -1,52 +1,83 @@
-#!/usr/bin/ruby
-require 'irb/completion'
-require 'irb/ext/save-history'
+#!/usr/bin/env ruby
 
-IRB.conf[:SAVE_HISTORY] = 1000
-IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb_history"
+require "irb"
+require "irb/completion"
 
+IRB.conf[:SAVE_HISTORY] = 1_000
+IRB.conf[:HISTORY_FILE] = File.join(Dir.home, ".irb_history")
 IRB.conf[:PROMPT_MODE] = :SIMPLE
 
-%w[rubygems looksee/shortcuts wirble].each do |gem|
-  begin
-    require gem
-  rescue LoadError
+module DotfilesClipboard
+  module_function
+
+  def writer
+    return ["pbcopy"] if available?("pbcopy")
+    return ["wl-copy"] if available?("wl-copy")
+    return ["xclip", "-selection", "clipboard"] if available?("xclip")
+
+    nil
+  end
+
+  def reader
+    return ["pbpaste"] if available?("pbpaste")
+    return ["wl-paste", "--no-newline"] if available?("wl-paste")
+    return ["xclip", "-selection", "clipboard", "-o"] if available?("xclip")
+
+    nil
+  end
+
+  def available?(command)
+    ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |directory|
+      candidate = File.join(directory, command)
+      File.file?(candidate) && File.executable?(candidate)
+    end
   end
 end
 
 class Object
-  # list methods which aren't in superclass
+  # List methods defined directly on the object's class.
   def local_methods(obj = self)
     (obj.methods - obj.class.superclass.instance_methods).sort
   end
-  
-  # print documentation
+
+  # Print ri documentation for a class or method.
   #
-  #   ri 'Array#pop'
+  #   ri "Array#pop"
   #   Array.ri
   #   Array.ri :pop
-  #   arr.ri :pop
+  #   [].ri :pop
   def ri(method = nil)
-    unless method && method =~ /^[A-Z]/ # if class isn't specified
-      klass = self.kind_of?(Class) ? name : self.class.name
-      method = [klass, method].compact.join('#')
+    unless method && method.to_s.match?(/\A[A-Z]/)
+      klass = is_a?(Class) ? name : self.class.name
+      method = [klass, method].compact.join("#")
     end
-    system 'ri', method.to_s
+    system("ri", method.to_s)
   end
 end
 
-def copy(str)
-  IO.popen('pbcopy', 'w') { |f| f << str.to_s }
+def copy(value)
+  command = DotfilesClipboard.writer
+  raise "No clipboard writer found (pbcopy, wl-copy, or xclip)" unless command
+
+  IO.popen(command, "w") { |clipboard| clipboard.write(value.to_s) }
+  value
 end
 
 def copy_history
-  history = Readline::HISTORY.entries
-  index = history.rindex("exit") || -1
-  content = history[(index+1)..-2].join("\n")
-  puts content
-  copy content
+  history = if defined?(Reline::HISTORY)
+              Reline::HISTORY.to_a
+            elsif defined?(Readline::HISTORY)
+              Readline::HISTORY.to_a
+            else
+              []
+            end
+  last_exit = history.rindex("exit") || -1
+  copy(history[(last_exit + 1)..-2].to_a.join("\n"))
 end
 
 def paste
-  `pbpaste`
+  command = DotfilesClipboard.reader
+  raise "No clipboard reader found (pbpaste, wl-paste, or xclip)" unless command
+
+  IO.popen(command, &:read)
 end

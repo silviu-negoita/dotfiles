@@ -1,9 +1,13 @@
-c() { cd ~/code/$1; }
-_c() { _files -W ~/code -/; }
+c() {
+  builtin cd -- "${PROJECTS_PATH:-$HOME/projects}/${1:-}"
+}
+_c() { _files -W "${PROJECTS_PATH:-$HOME/projects}" -/; }
 compdef _c c
 
-h() { cd ~/$1; }
-_h() { _files -W ~/ -/; }
+h() {
+  builtin cd -- "$HOME/${1:-}"
+}
+_h() { _files -W "$HOME" -/; }
 compdef _h h
 
 # autocorrect is more annoying than helpful
@@ -14,5 +18,6 @@ alias gs='git status'
 alias gd='git diff'
 alias tlog='tail -f log/development.log'
 
-# add plugin's bin directory to path
-export PATH="$(dirname $0)/bin:$PATH"
+# Add the plugin's bin directory once.
+typeset -U path PATH
+path=("${0:A:h}/bin" $path)

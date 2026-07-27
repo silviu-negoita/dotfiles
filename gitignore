@@ -1,4 +1,8 @@
 .DS_Store
-.svn
+Thumbs.db
+.idea/
+.vscode/
+.svn/
 *~
-.*.swp
+*.swp
+*.swo

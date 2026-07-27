@@ -1,4 +1,4 @@
-" based on http://github.com/jferris/config_files/blob/master/vimrc
+" Originally based on https://github.com/jferris/config_files/blob/master/vimrc
 
 " Use Vim settings, rather then Vi settings (much better!).
 " This must be first, because it changes other options as a side effect.
@@ -9,7 +9,7 @@ set backspace=indent,eol,start
 
 set nobackup
 set nowritebackup
-set history=50		" keep 50 lines of command line history
+set history=1000	" keep command-line history
 set ruler		" show the cursor position all the time
 set showcmd		" display incomplete commands
 set incsearch		" do incremental searching
@@ -39,15 +39,14 @@ if has("autocmd")
   " Also load indent files, to automatically do language-dependent indenting.
   filetype plugin indent on
 
-  " Set File type to 'text' for files ending in .txt
+  augroup dotfiles_vimrc
+  autocmd!
+
+  " Set file type to text for files ending in .txt.
   autocmd BufNewFile,BufRead *.txt setfiletype text
 
-  " Enable soft-wrapping for text files
+  " Enable soft-wrapping for text files.
   autocmd FileType text,markdown,html,xhtml,eruby setlocal wrap linebreak nolist
-
-  " Put these in an autocmd group, so that we can delete them easily.
-  augroup vimrcEx
-  au!
 
   " For all text files set 'textwidth' to 78 characters.
   " autocmd FileType text setlocal textwidth=78
@@ -60,24 +59,13 @@ if has("autocmd")
     \   exe "normal g`\"" |
     \ endif
 
-  " Automatically load .vimrc source when saved
-  autocmd BufWritePost .vimrc source $MYVIMRC
+  " Automatically reload this file when it is saved.
+  autocmd BufWritePost $MYVIMRC nested source $MYVIMRC
 
   augroup END
-
 else
-
-  set autoindent		" always set autoindenting on
-
-endif " has("autocmd")
-
-" if has("folding")
-  " set foldenable
-  " set foldmethod=syntax
-  " set foldlevel=1
-  " set foldnestmax=2
-  " set foldtext=strpart(getline(v:foldstart),0,50).'\ ...\ '.substitute(getline(v:foldend),'^[\ #]*','','g').'\ '
-" endif
+  set autoindent
+endif
 
 " Softtabs, 2 spaces
 set tabstop=2
@@ -154,13 +142,16 @@ imap <C-L> <Space>=><Space>
 command! Rroutes :e config/routes.rb
 command! Rschema :e db/schema.rb
 
-" Local config
-if filereadable(".vimrc.local")
-  source .vimrc.local
+" Local config (disabled by the repository's syntax check).
+if empty($DOTFILES_SKIP_LOCAL) && filereadable(expand("~/.vimrc.local"))
+  execute "source " . fnameescape(expand("~/.vimrc.local"))
 endif
 
-" Use Ack instead of Grep when available
-if executable("ack")
+" Use ripgrep for :grep when available, with Ack as a fallback.
+if executable("rg")
+  set grepprg=rg\ --vimgrep\ --smart-case
+  set grepformat=%f:%l:%c:%m
+elseif executable("ack")
   set grepprg=ack\ -H\ --nogroup\ --nocolor\ --ignore-dir=tmp\ --ignore-dir=coverage
 endif
 
@@ -192,16 +183,31 @@ set tags=./tags;
 
 let g:fuf_splitPathMatching=1
 
-" Open URL
-command -bar -nargs=1 OpenURL :!open <args>
-function! OpenURL()
-  let s:uri = matchstr(getline("."), '[a-z]*:\/\/[^ >,;:]*')
-  echo s:uri
-  if s:uri != ""
-	  exec "!open \"" . s:uri . "\""
+" Open URLs on macOS or Linux.
+function! s:OpenURL(uri) abort
+  if has("mac")
+    let l:opener = "open"
+  elseif executable("xdg-open")
+    let l:opener = "xdg-open"
+  elseif executable("gio")
+    let l:opener = "gio open"
   else
-	  echo "No URI found in line."
+    echoerr "No URL opener found (open, xdg-open, or gio)"
+    return
   endif
+
+  call system(l:opener . " " . shellescape(a:uri) . " >/dev/null 2>&1 &")
+endfunction
+
+command! -bar -nargs=1 OpenURL call <SID>OpenURL(<q-args>)
+
+function! OpenURL() abort
+  let l:uri = matchstr(getline("."), '\vhttps?://[^ >,;]+')
+  if empty(l:uri)
+    echo "No URI found in line."
+    return
+  endif
+
+  call s:OpenURL(l:uri)
 endfunction
 map <Leader>w :call OpenURL()<CR>
-

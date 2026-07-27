@@ -1,79 +1,83 @@
-# Ryan Bates Dot Files
+# Silviu's dotfiles
 
-These are config files to set up a system the way I like it. It now uses [Oh My ZSH](https://github.com/robbyrussell/oh-my-zsh). If you would like to see my old, custom Bash and ZSH config, check out [this branch](https://github.com/ryanb/dotfiles/tree/custom-bash-zsh)
+Personal shell, Git, Ruby, and Vim configuration for macOS and Linux. The
+repository keeps the day-to-day commands in version control while leaving
+machine-specific settings and secrets outside Git.
 
-I am running on Mac OS X, but it will likely work on Linux as well.
+## Requirements
 
+- Zsh
+- Git
+- Ruby and Rake
+- Vim (optional, but required by `rake check`)
+- `fzf` for the interactive shell helpers
 
-## Installation
+Oh My Zsh and the two external Zsh plugins are installed on demand:
+`zsh-autosuggestions` and `zsh-syntax-highlighting`.
 
-Run the following commands in your terminal. It will prompt you before it does anything destructive. Check out the [Rakefile](https://github.com/ryanb/dotfiles/blob/custom-bash-zsh/Rakefile) to see exactly what it does.
+## Install
 
-```terminal
-git clone git://github.com/ryanb/dotfiles ~/.dotfiles
+```sh
+git clone https://github.com/silviu-negoita/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 rake install
 ```
 
-After installing, open a new terminal window to see the effects.
+The installer is interactive and idempotent:
 
-Feel free to customize the .zshrc file to match your preference.
+- existing managed links are left alone;
+- changed targets are replaced only after confirmation;
+- replaced files are moved under `~/.dotfiles-backups/<timestamp>/`;
+- `~/.zshrc` is copied, preserving the historical behavior of this repo;
+- generated `~/.gitconfig` has mode `0600`;
+- `README.md` and `LICENSE` are no longer installed as accidental dotfiles.
 
+Run the diagnostics without changing the machine:
 
-## Features
-
-Many of the following features are added through the "rbates" Oh My ZSH plugin.
-
-I normally place all of my coding projects in ~/code, so this directory can easily be accessed (and tab completed) with the "c" command.
-
-```terminal
-c railsca<tab>
+```sh
+rake doctor
 ```
 
-There is also an "h" command which behaves similar, but acts on the home path.
+## Local configuration and secrets
 
-```terminal
-h doc<tab>
+`zshrc` loads `~/.zshrc.local` when it exists. Put machine-specific paths and
+non-public configuration there, and keep the file outside this repository:
+
+```sh
+touch ~/.zshrc.local
+chmod 600 ~/.zshrc.local
 ```
 
-Tab completion is also added to rake and cap commands:
+Do not store API keys, passwords, or access tokens in this repository. Prefer a
+credential manager or a dedicated secrets CLI; if environment variables are
+unavoidable, keep them in the local file with restrictive permissions.
 
-```
-rake db:mi<tab>
-cap de<tab>
-```
+The repository also installs `my_aliases.sh` and `my_functions.sh` as
+`~/.my_aliases.sh` and `~/.my_functions.sh`.
 
-To speed things up, the results are cached in local .rake_tasks~ and .cap_tasks~. It is smart enough to expire the cache automatically in most cases, but you can simply remove the files to flush the cache.
+## Validation
 
-If you're using git, you'll notice the current branch name shows up in the prompt while in a git repository.
-
-There are several features enabled in Ruby's irb including history and completion. Many convenience methods are added as well such as "ri" which can be used to get inline documentation in IRB. See irbrc file for details.
-
-
-## Uninstall
-
-To remove the dotfile configs, run the following commands. Be certain to double check the contents of the files before removing so you don't lose custom settings.
-
-```
-unlink ~/.bin
-unlink ~/.gitignore
-unlink ~/.gemrc
-unlink ~/.gvimrc
-unlink ~/.irbrc
-unlink ~/.vim
-unlink ~/.vimrc
-rm ~/.zshrc # careful here
-rm ~/.gitconfig
-rm -rf ~/.dotfiles
-rm -rf ~/.oh-my-zsh
-chsh -s /bin/bash # change back to Bash if you want
+```sh
+rake check
 ```
 
-Then open a new terminal window to see the effects.
+This runs the Ruby tests and syntax checks for Ruby, Bash, Zsh, and Vim files.
+No network access or changes to the home directory are made by the check.
 
-# 
-Manual addons:
-```
-git clone https://github.com/zsh-users/zsh-autosuggestions $ZSH_CUSTOM/plugins/zsh-autosuggestions 
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-```
+## Vim compatibility
+
+The Vim directory still contains the legacy vendored plugins used by the
+existing `vimrc`. They are intentionally kept in place so an update does not
+silently remove commands or mappings. New Vim dependencies should use native
+packages under `vim/pack/*/start`; see Vim's `:help packages`.
+
+## Workstation helper
+
+`workstation_setup.sh` contains the small GNOME-specific setup. It exits cleanly
+on macOS and other systems without `gsettings`.
+
+## License and history
+
+This repository started as a fork of Ryan Bates' dotfiles. The original MIT
+license is retained in `LICENSE`; the current configuration and installer have
+since diverged substantially.

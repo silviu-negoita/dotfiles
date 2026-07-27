@@ -1,25 +1,42 @@
-ZSH=$HOME/.oh-my-zsh
+export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
+export ZSH_CUSTOM="${ZSH_CUSTOM:-$ZSH/custom}"
 ZSH_THEME="robbyrussell"
 
-for f in ~/.my_*;
-  do
-    source ${f};
-  done;
+# Keep PATH entries unique and support both Apple Silicon and Intel Homebrew.
+typeset -U path PATH
+[[ -d /opt/homebrew/bin ]] && path=(/opt/homebrew/bin $path)
+[[ -d /usr/local/bin ]] && path=(/usr/local/bin $path)
 
-# plugins=(git bundler brew gem rbates mvn web-search rand-quote themes)
-plugins=(git gem rbates web-search lol zsh-syntax-highlighting rand-quote themes)
+# Project-managed aliases and functions.
+for config_file in "$HOME"/.my_*(N); do
+  [[ -r "$config_file" ]] && source "$config_file"
+done
+unset config_file
 
-export PATH="/usr/local/bin:$PATH"
-export EDITOR='mate -w'
+plugins=(
+  git
+  gem
+  rbates
+  web-search
+  kubectl
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
 
+export EDITOR="${EDITOR:-vim}"
+export VISUAL="${VISUAL:-$EDITOR}"
 
-source $ZSH/oh-my-zsh.sh
+if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
+  source "$ZSH/oh-my-zsh.sh"
+else
+  print -u2 "dotfiles: Oh My Zsh is not installed at $ZSH; run 'rake install'"
+fi
 
-# for Homebrew installed rbenv
-if which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
+if command -v rbenv >/dev/null 2>&1; then
+  eval "$(rbenv init - zsh)"
+fi
 
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+[[ -r "$HOME/.fzf.zsh" ]] && source "$HOME/.fzf.zsh"
 
-#if [ $TILIX_ID ] || [ $VTE_VERSION ]; then
-#        source /etc/profile.d/vte.sh
-# fi
+# Machine-specific paths and secrets belong here, outside the repository.
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

@@ -1,45 +1,81 @@
-#!/usr/bin/env ruby -w
+#!/usr/bin/env ruby
+
+require "open3"
+require "optparse"
+require "set"
 
 class TagVersions
-  def initialize(args)
-    print_help if args.empty?
-    @regexp = nil
-    @preview = false
-    args.each do |argument|
-      case argument
-      when '-a', '--all' then @regexp = ".*"
-      when '-p', '--preview' then @preview = true
-      when '-h', '--help' then print_help
-      else @regexp = argument
+  VERSION_PATTERN = /\bv?(\d+(?:\.\d+)+)\b/
+
+  def self.from_argv(argv, output: $stdout)
+    options = { preview: false, all: false }
+    parser = OptionParser.new do |opts|
+      opts.banner = "Usage: tagversions [OPTIONS] [REGEXP]"
+      opts.separator "Tag commits whose subjects contain a version and match REGEXP."
+      opts.on("-a", "--all", "Search all commits") { options[:all] = true }
+      opts.on("-p", "--preview", "Print tags without creating them") { options[:preview] = true }
+      opts.on("-h", "--help", "Display this help") do
+        output.puts opts
+        return nil
       end
     end
+
+    remaining = parser.parse(argv)
+    pattern = options[:all] || remaining.empty? ? /.*/ : Regexp.new(remaining.first)
+    new(pattern: pattern, preview: options[:preview], output: output)
+  rescue OptionParser::ParseError, RegexpError => error
+    raise ArgumentError, error.message
   end
 
-  def print_help
-    puts <<-HELP
-Usage: tagversions [OPTIONS] [REGEXP]
-  Look through the git commits for messages with the given regular expression and tag what looks like verisons.
-
-  Options:
-    -a, --all     Search all commits, not just the ones matching the regular expression.
-    -p, --preview Don't do actual branching, instead print out what will be tagged.
-    -h, --help    Display this help page.
-HELP
-    exit
+  def initialize(pattern:, preview: false, output: $stdout)
+    @pattern = pattern
+    @preview = preview
+    @output = output
   end
 
   def run
-    tags = `git tag`.split("\n")
-    `git log --pretty="%H %s" | grep "#{@regexp}"`.split("\n").each do |line|
-      version = line[/\bv?(\d\.[\d\.]*)\b/, 1]
-      sha = line[/^\w+/]
-      if version && !version.empty? && !tags.include?(version)
-        puts "Tagging #{version} on #{sha}"
-        tags << version
-        `git tag -a "#{version}" -m "version #{version}" "#{sha}"` unless @preview
-      end
+    tags = git_lines("tag", "--list").to_set
+
+    git_lines("log", "--format=%H%x00%s").each do |line|
+      sha, subject = line.split("\0", 2)
+      next unless subject && subject.match?(@pattern)
+
+      match = subject.match(VERSION_PATTERN)
+      next unless match
+
+      version = match[1]
+      next if tags.include?(version)
+
+      prefix = @preview ? "Would tag" : "Tagging"
+      @output.puts "#{prefix} #{version} on #{sha}"
+      create_tag(version, sha) unless @preview
+      tags << version
     end
+  end
+
+  private
+
+  def git_lines(*arguments)
+    output, status = Open3.capture2e("git", *arguments)
+    raise "git #{arguments.first} failed: #{output.strip}" unless status.success?
+
+    output.lines(chomp: true)
+  end
+
+  def create_tag(version, sha)
+    output, status = Open3.capture2e(
+      "git", "tag", "-a", version, "-m", "version #{version}", sha
+    )
+    raise "git tag failed: #{output.strip}" unless status.success?
   end
 end
 
-TagVersions.new($*).run
+if $PROGRAM_NAME == __FILE__
+  begin
+    tagger = TagVersions.from_argv(ARGV)
+    tagger&.run
+  rescue ArgumentError, RuntimeError => error
+    warn "tagversions: #{error.message}"
+    exit 2
+  end
+end

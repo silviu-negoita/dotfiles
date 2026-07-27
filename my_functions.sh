@@ -1,33 +1,54 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 urlencodepipe() {
-  local LANG=C; local c; while IFS= read -r c; do
-    case $c in [a-zA-Z0-9.~_-]) printf "$c"; continue ;; esac
-    printf "$c" | od -An -tx1 | tr ' ' % | tr -d '\n'
-  done <<EOF
-$(fold -w1)
-EOF
-  echo
+  local input
+  input="$(<&0)"
+  urlencode "$input"
 }
 
+urlencode() {
+  local LC_ALL=C input="$*" output="" character hex index
 
-urlencode() { printf "$*" | urlencodepipe ;}
+  for (( index = 1; index <= ${#input}; index++ )); do
+    character="${input[index]}"
+    case "$character" in
+      [a-zA-Z0-9.~_-])
+        output+="$character"
+        ;;
+      *)
+        printf -v hex "%02X" "'$character"
+        output+="%$hex"
+        ;;
+    esac
+  done
 
+  print -r -- "$output"
+}
 
 #personal
-function open () {
-    xdg-open "$*" &>/dev/null
+open() {
+  if [[ "$OSTYPE" == darwin* ]]; then
+    command open "$@"
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$@" >/dev/null 2>&1 &
+  elif command -v gio >/dev/null 2>&1; then
+    gio open "$@" >/dev/null 2>&1 &
+  else
+    print -u2 "No opener found (open, xdg-open, or gio)."
+    return 1
+  fi
 }
 
-function singleton(){
-	local running=1
-	if [ -z "$@" ] || [ "$#" -gt 2 ]; then
-		echo "Usage : singleton [application] [identifier in ps -e]"
-	else
-		if ([ "$#" -eq 2 ] && [ -z $(pgrep -x "$2") ]) || ([ "$#" -eq 1 ] && [ -z $(pgrep -x "$1") ]); then
-			nohup "$1" > /dev/null 2>&1 &
-		fi
-	fi
+singleton() {
+  if (( $# < 1 || $# > 2 )); then
+    print -u2 "Usage: singleton <application> [process-name]"
+    return 2
+  fi
+
+  local application="$1" process_name="${2:-$1}"
+  if ! pgrep -x -- "$process_name" >/dev/null 2>&1; then
+    nohup "$application" >/dev/null 2>&1 &
+  fi
 }
 
 #Fuzzyfinder
@@ -47,38 +68,40 @@ fop() {
 # fd - cd to selected directory
 fcd() {
   local dir
-  dir=$(find ${1:-*} -path '*/\.*' -prune \
-             -o -type d -print 2> /dev/null | awk '{print length($1), $1}' | sort -n | cut -d ' ' -f 2- | fzf +m) &&
+  dir=$(find "${1:-.}" -path '*/\.*' -prune \
+             -o -type d -print 2> /dev/null | fzf +m) &&
   cd "$dir"
 }
 
 # fda - including hidden directories
 fda() {
   local dir
-  dir=$(find ${1:-.} -type d 2> /dev/null | fzf +m) && cd "$dir"
+  dir=$(find "${1:-.}" -type d 2> /dev/null | fzf +m) && cd "$dir"
 }
 
 # ffasd - change directory from a list
 ffasd() {
-    local directories directory
-    directories=$(fasd -ldrR | awk '{print length($1), $1}' | sort -n | cut -d ' ' -f 2- ) &&
-        directory=$(echo "$directories" | fzf +s +m) &&
-        cd $(echo "$directory")
+  local directories directory
+  directories=$(fasd -ldrR | awk '{print length($1), $1}' | sort -n | cut -d ' ' -f 2-) &&
+    directory=$(print -r -- "$directories" | fzf +s +m) &&
+    cd "$directory"
 }
 bindkey -s '^O' '^qffasd\n'
 
 # fkill - kill process
 fkill() {
-  ps -ef | sed 1d | fzf -m | awk '{print $2}' | xargs sudo kill -${1:-9}
+  local -a pids
+  pids=("${(@f)$(ps -ef | sed 1d | fzf -m | awk '{print $2}')}")
+  (( ${#pids} )) && sudo kill "-${1:-9}" -- "${pids[@]}"
 }
 
 # fbr - checkout git branch
 fgb() {
-    git pull
-    local branches branch
-    branches=$(git branch) &&
-        branch=$(echo "$branches" | fzf +s +m) &&
-        git checkout $(echo "$branch" | sed "s/.* //")
+  git pull --ff-only || return
+  local branches branch
+  branches=$(git branch) &&
+    branch=$(print -r -- "$branches" | fzf +s +m) &&
+    git switch "$(print -r -- "$branch" | sed "s/.* //")"
 }
 bindkey -s '^G' '^qfgb\n'
 
@@ -104,16 +127,16 @@ bindkey -s '^H' '^qfhbb\n'
 fgc() {
   local commits commit
   commits=$(git log --pretty=oneline --abbrev-commit --reverse) &&
-  commit=$(echo "$commits" | fzf +s +m -e) &&
-  git checkout $(echo "$commit" | sed "s/ .*//")
+  commit=$(print -r -- "$commits" | fzf +s +m -e) &&
+  git switch --detach "$(print -r -- "$commit" | sed "s/ .*//")"
 }
 
 # fzgt - checkout git tags
 fgt() {
   local tags tag
   tags=$(git tag) &&
-  tag=$(echo "$tags" | fzf +s +m) &&
-  git checkout tags/$(echo "$tag" | sed "s/.* //")
+  tag=$(print -r -- "$tags" | fzf +s +m) &&
+  git switch --detach "tags/$(print -r -- "$tag" | sed "s/.* //")"
 }
 
 # ftags - search ctags
@@ -127,48 +150,64 @@ ftags() {
                                       -c "silent tag $(cut -f2 <<< "$line")"
 }
 
-function cd() {
-    if [[ "$#" != 0 ]]; then
-        builtin cd "$@";
-        return
-    fi
-    while true; do
-        local lsd=$(echo ".." && ls -p | grep '/$' | sed 's;/$;;')
-        local dir="$(printf '%s\n' "${lsd[@]}" |
-            fzf --reverse --preview '
-                __cd_nxt="$(echo {})";
-                __cd_path="$(echo $(pwd)/${__cd_nxt} | sed "s;//;/;")";
-                echo $__cd_path;
-                echo;
-                ls -p --color=always "${__cd_path}";
-        ')"
-        [[ ${#dir} != 0 ]] || return 0
-        builtin cd "$dir" &> /dev/null
-    done
+cd() {
+  if (( $# != 0 )); then
+    builtin cd "$@"
+    return
+  fi
+
+  while true; do
+    local directory
+    directory="$(
+      {
+        print ".."
+        find . -mindepth 1 -maxdepth 1 -type d -print |
+          sed 's#^\./##' |
+          sort
+      } | fzf --reverse --preview 'ls -p --color=always -- {} 2>/dev/null'
+    )"
+    [[ -n "$directory" ]] || return 0
+    builtin cd "$directory" >/dev/null 2>&1
+  done
 }
 
 ch() {
-  local cols sep google_history open
+  local cols sep google_history opener history_copy
   cols=$(( COLUMNS / 3 ))
   sep='{::}'
 
   if [ "$(uname)" = "Darwin" ]; then
     google_history="$HOME/Library/Application Support/Google/Chrome/Default/History"
-    open=open
+    opener=open
   else
     google_history="$HOME/.config/google-chrome/Default/History"
-    open=xdg-open
+    opener=xdg-open
   fi
-  cp -f "$google_history" /tmp/h
-  sqlite3 -separator $sep /tmp/h \
+
+  history_copy="$(mktemp "${TMPDIR:-/tmp}/chrome-history.XXXXXX")" || return 1
+  if ! cp -f "$google_history" "$history_copy"; then
+    rm -f "$history_copy"
+    return 1
+  fi
+  sqlite3 -separator "$sep" "$history_copy" \
     "select substr(title, 1, $cols), url
      from urls order by last_visit_time desc" |
-  awk -F $sep '{printf "%-'$cols's  \x1b[36m%s\x1b[m\n", $1, $2}' |
-  fzf --ansi --multi | sed 's#.*\(https*://\)#\1#' | xargs $open > /dev/null 2> /dev/null
+  awk -F "$sep" '{printf "%-'"$cols"'s  \x1b[36m%s\x1b[m\n", $1, $2}' |
+  fzf --ansi --multi | sed 's#.*\(https*://\)#\1#' |
+  while IFS= read -r url; do
+    "$opener" "$url" >/dev/null 2>&1
+  done
+  local status=$?
+  rm -f "$history_copy"
+  return "$status"
 }
 
 #lpass
-lastpass() {lpass show -c --password $(lpass ls  | fzf | awk '{print $(NF)}' | sed 's/\]//g')}
+lastpass() {
+  local entry
+  entry="$(lpass ls | fzf | awk '{print $(NF)}' | sed 's/\]//g')" || return 1
+  [[ -n "$entry" ]] && lpass show -c --password "$entry"
+}
 
 # Select a docker container to start and attach to
 function da() {
@@ -186,10 +225,9 @@ function ds() {
 }
 
 # Docker
-docker_is_active=`systemctl is-active docker &> /dev/null`
-if [ $docker_is_active ]; then
+if command -v docker >/dev/null 2>&1; then
     alias dobuild='docker build .'
-    alias dobuildrunlastimage='docker build . && docker run -d `docker images -q|head -1`'
+    alias dobuildrunlastimage='docker build . && docker run -d "$(docker images -q | head -1)"'
     alias dorestart='sudo systemctl start docker'
     alias doimages='docker images'
     #delete all stopped containers
@@ -197,50 +235,69 @@ if [ $docker_is_active ]; then
     alias dostopall='docker stop $(docker ps -q)'
     alias dopsa='docker ps -a'
     alias dops='docker ps'
-    alias dormiall='docker rmi `docker images -q`'
-    alias donosudo='sudo groupadd docker ; usermod -a -G docker ${USERNAME} ; sudo gpasswd -a ${USERNAME} docker ; sudo service docker restart'
-    alias dolastimage='docker images -q|head -1'
-    alias dostoplast='docker stop `docker ps -q|head -1`'
-    alias doimagesqhead1='docker images -q|head -1'
-    alias docontainersqhead1='docker ps -a -q|head -1'
-    alias dopsqhead1='docker ps -q|head -1'
-    # alias dorunlastimage='docker run -d `docker images -q|head -1`'
-    alias doretrylast="dostoplast && dorunlastimage && sleep 1s && dosshlast"
+    alias dormiall='docker rmi $(docker images -q)'
+    alias donosudo='sudo groupadd docker; sudo usermod -a -G docker "$USER"; sudo service docker restart'
+    alias dolastimage='docker images -q | head -1'
+    alias dostoplast='docker stop "$(docker ps -q | head -1)"'
+    alias doimagesqhead1='docker images -q | head -1'
+    alias docontainersqhead1='docker ps -a -q | head -1'
+    alias dopsqhead1='docker ps -q | head -1'
     #delete all untagged images
-    alias docleanintermediary="docker rmi $(docker images | grep '^<none>' | awk '{print $3}')"
+    alias docleanintermediary='docker rmi $(docker images | awk '"'"'$1 == "<none>" {print $3}'"'"')'
     #cleanpup. delete all stopped containers and remove untagged images
-    alias docleanall="dormall ; dormiall"
-;fi
+    alias docleanall='dormall; dormiall'
+fi
 
 gitreview(){
-    if [ -z "$1" ]
-    then
-        BASE_BRANCH="master"
-        BRANCH_TO_REVIEW=`git rev-parse --abbrev-ref HEAD`
-    else
-        BASE_BRANCH="$1"
-        BRANCH_TO_REVIEW="$2"
+  local base_branch branch_to_review confirmation
+  if (( $# == 0 )); then
+    base_branch="$(
+      git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null |
+        sed 's#^origin/##'
+    )"
+    if [[ -z "$base_branch" ]]; then
+      if git show-ref --verify --quiet refs/heads/main; then
+        base_branch=main
+      else
+        base_branch=master
+      fi
     fi
-    git reset --hard; git clean -f -d
-    echo "switching to branch $BASE_BRANCH"
-    eval "git checkout $BASE_BRANCH"
-    echo "merging $BRANCH_TO_REVIEW into $BASE_BRANCH"
-    eval "git merge $BRANCH_TO_REVIEW"
+    branch_to_review="$(git branch --show-current)"
+  elif (( $# == 2 )); then
+    base_branch="$1"
+    branch_to_review="$2"
+  else
+    print -u2 "Usage: gitreview [base-branch branch-to-review]"
+    return 2
+  fi
+
+  print -u2 "This discards uncommitted and untracked changes in $(pwd)."
+  read -r "confirmation?Continue? [y/N] "
+  [[ "$confirmation" == [yY] ]] || return 1
+
+  git reset --hard &&
+    git clean -fd &&
+    git switch "$base_branch" &&
+    git merge -- "$branch_to_review"
 }
 
 # bind keys
 
 getbranchname(){
-    if [ -d $1/.git ]
-    then
-        echo `(cd $1; git branch | grep \* | cut -d ' ' -f2)`
-    else
-        echo `(cd $1; hg branch)`
-    fi
+  local repository="$1"
+  if git -C "$repository" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "$repository" branch --show-current
+  else
+    hg --cwd "$repository" branch
+  fi
 }
 
 getallbranches() {
-    echo `(cd $1; git fetch && (git branch -r  | fzf))`
+  local repository="$1"
+  git -C "$repository" fetch --prune || return 1
+  git -C "$repository" branch --remotes --format='%(refname:short)' |
+    grep -vE '(^|/)HEAD$' |
+    fzf
 }
 
 insert_sudo () { zle beginning-of-line; zle -U "sudo " }
@@ -260,7 +317,10 @@ list_functions_aliases() {
     fi
 
     echo "Functions:"
-    grep '^function ' "$file" | sed 's/^function \([^ ]*\) .*/\1/'
+    sed -nE \
+      -e 's/^function[[:space:]]+([[:alnum:]_-]+).*/\1/p' \
+      -e 's/^([[:alnum:]_-]+)\(\)[[:space:]]*\{.*/\1/p' \
+      "$file"
 
     echo "Aliases:"
     grep '^alias ' "$file" | sed 's/^alias \([^=]*\)=.*/\1/'
@@ -279,30 +339,61 @@ list_functions_aliases_with_comments() {
     fi
 
     echo "Functions:"
-    awk '/^function / { name = $2; getline; if ($0 ~ /^#/) { comment = substr($0, 2); } else { comment = ""; } print "- " name " : " comment }' "$file"
+    awk '
+      /^[[:space:]]*#/ {
+        comment = $0
+        sub(/^[[:space:]]*#[[:space:]]*/, "", comment)
+        next
+      }
+      /^function[[:space:]]+/ || /^[[:alnum:]_-]+\(\)[[:space:]]*\{/ {
+        name = $0
+        sub(/^function[[:space:]]+/, "", name)
+        sub(/\(.*/, "", name)
+        sub(/[[:space:]].*/, "", name)
+        print "- " name (comment == "" ? "" : " : " comment)
+        comment = ""
+        next
+      }
+      NF { comment = "" }
+    ' "$file"
 
     echo "Aliases:"
-    awk '/^alias / { name = $2; getline; if ($0 ~ /^#/) { comment = substr($0, 2); } else { comment = ""; } print "- " name " : " comment }' "$file"
+    awk '
+      /^[[:space:]]*#/ {
+        comment = $0
+        sub(/^[[:space:]]*#[[:space:]]*/, "", comment)
+        next
+      }
+      /^alias[[:space:]]+/ {
+        name = $0
+        sub(/^alias[[:space:]]+/, "", name)
+        sub(/=.*/, "", name)
+        print "- " name (comment == "" ? "" : " : " comment)
+        comment = ""
+        next
+      }
+      NF { comment = "" }
+    ' "$file"
 }
 
 
 dothelp() {
-  list_functions_aliases_with_comments $HOME'/.my_aliases.sh'
+  list_functions_aliases_with_comments "$HOME/.my_aliases.sh"
 }
 
 get_env_var_value() {
   local namespace=dashboard-1
-  local app=$1  # Use the app parameter passed to the function
+  local app="$1" db_ip redis_ip yaml
   # Get dbIp and redisIp using kubectl commands
-  dbIp=$(kubectl get configmap -n "$namespace" postgresql-cmek-"$app" -o jsonpath='{.data.DATABASE_HOST}')
-  redisIp=$(kubectl get configmap -n "$namespace" redis -o jsonpath='{.data.REDIS_HOST}')
+  db_ip=$(kubectl get configmap -n "$namespace" postgresql-cmek-"$app" -o jsonpath='{.data.DATABASE_HOST}')
+  redis_ip=$(kubectl get configmap -n "$namespace" redis -o jsonpath='{.data.REDIS_HOST}')
 
   # Format into YAML
   yaml=$(cat <<EOF
 
 egress:
-  dbIp: $dbIp
-  redisIp: $redisIp
+  dbIp: $db_ip
+  redisIp: $redis_ip
   dnsHosts:
     - api.signicat.com
 EOF
@@ -313,8 +404,7 @@ EOF
 }
 
 write_to_file() {
-  app=$1
-  file_path=$2
+  local app="$1" file_path="$2"
 
   # Check if file contains 'egress'
   if ! grep -q 'egress' "$file_path"; then
@@ -323,32 +413,16 @@ write_to_file() {
     echo "written to $file_path"
   fi
 }
-function givemedata() {
-  local env="dev"
-#echo "ncs"
-#write_to_file "ncs" /home/silviun/projects/notification-center-service/infra/helm-values/$env.yaml
-#
-#echo "oapi"
-#write_to_file "oapi" /home/silviun/projects/octopus/infra/helm-values/$env.yaml
-#
-#echo "theming"
-#write_to_file "theming" /home/silviun/projects/theming-api/infra/helm-values/$env.yaml
-#
-#echo "storefront"
-#write_to_file "storefront" /home/silviun/projects/storefront/infra/helm-values/$env.yaml
-#
-#echo "pay-api"
-#write_to_file "pay-api" /home/silviun/projects/payment-api/infra/helm-values/$env.yaml
 
-#echo "dashboard-svc"
-#write_to_file "dashboard-svc" /home/silviun/projects/dashboard-service/infra/helm-values/$env.yaml
+# Retained for compatibility; the old implementation had no active targets.
+givemedata() {
+  :
 }
-
 
 gitlab_projects=("storefront" "dashboard-service" "octopus" "notification-center-service" "theming-api" "payment-api" "td1-mfes" "automation" )
 
 transform_string() {
-    input_string="$1"
+    local input_string="$1" transformed_string
 
     # Replace "-" with space and capitalize each word
     transformed_string=$(echo "$input_string" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1')
@@ -356,19 +430,21 @@ transform_string() {
     echo "$transformed_string"
 }
 
-function show_gitlab_project_info() {
+show_gitlab_project_info() {
+  local app="$1" api_url response latest_pipeline_url
+  api_url="https://gitlab.com/api/v4/projects/signicat%2Forange-stack%2Fself-service%2F$app/pipelines"
 
-  local app=$1
-  # GitLab API URL
-  API_URL="https://gitlab.com/api/v4/projects/signicat%2Forange-stack%2Fself-service%2F$app/pipelines"
+  if [[ -z "${GITLAB_PRIVATE_TOKEN:-}" ]]; then
+    print -u2 "GITLAB_PRIVATE_TOKEN is not available."
+    return 1
+  fi
 
-  # GitLab Private Token
-  PRIVATE_TOKEN="$GITLAB_PRIVATE_TOKEN"
-
-  # Fetching pipeline information with authentication
-  response=$(curl -s --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "$API_URL")
-  # Parsing JSON to get the latest pipeline URL
-  latest_pipeline_url=$(echo "$response" | jq -r '.[0].web_url')
+  response="$(
+    curl --fail --silent --show-error \
+      --header "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" \
+      "$api_url"
+  )" || return 1
+  latest_pipeline_url="$(print -r -- "$response" | jq -r '.[0].web_url // "none"')"
 
   # Output the latest pipeline URL
   echo "Project:             https://gitlab.com/signicat/orange-stack/self-service/$app"
@@ -376,66 +452,37 @@ function show_gitlab_project_info() {
   echo "Merge Requests:      https://gitlab.com/signicat/orange-stack/self-service/$app/-/merge_requests"
   echo ""
 }
-function show_gitlab_latest_pipeline() {
-
-  local app=$1
-  # GitLab API URL
-  API_URL="https://gitlab.com/api/v4/projects/signicat%2Forange-stack%2Fself-service%2F$app/pipelines"
-
-  # GitLab Private Token
-  PRIVATE_TOKEN="$GITLAB_PRIVATE_TOKEN"
-
-  # Fetching pipeline information with authentication
-  response=$(curl -s --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "$API_URL")
-  # Parsing JSON to get the latest pipeline URL
-  latest_pipeline_url=$(echo "$response" | jq -r '.[0].web_url')
-
-  # Output the latest pipeline URL
-  echo "$latest_pipeline_url"
-}
 
 
 oallgitprojectinfos() {
- for project in "${gitlab_projects[@]}"; do
-     transformed_project=$(transform_string "$project")
-     echo "$transformed_project"
-     show_gitlab_project_info $project
- done
-}
-oallgitprojectlatestpipelines() {
- for project in "${gitlab_projects[@]}"; do
-     transformed_project=$(transform_string "$project")
-     latest_pipeline=$(show_gitlab_latest_pipeline "$project")
-     echo "$transformed_project - $latest_pipeline"
- done
+  local project transformed_project
+  for project in "${gitlab_projects[@]}"; do
+    transformed_project="$(transform_string "$project")"
+    print "$transformed_project"
+    show_gitlab_project_info "$project"
+  done
 }
 
-function ogitprojectinfo() {
-  selected_project=$(printf "%s\n" "${gitlab_projects[@]}" | fzf --prompt="Select a project: ")
-  transformed_project=$(transform_string "$selected_project")
-  echo $transformed_project
-  show_gitlab_project_info $selected_project
+ogitprojectinfo() {
+  local selected_project transformed_project
+  selected_project="$(printf "%s\n" "${gitlab_projects[@]}" | fzf --prompt="Select a project: ")" ||
+    return 1
+  [[ -n "$selected_project" ]] || return 1
+  transformed_project="$(transform_string "$selected_project")"
+  print "$transformed_project"
+  show_gitlab_project_info "$selected_project"
 }
 
-function createfile() {
-  # Check if the user provided the filename and size as arguments
-  if [ $# -ne 2 ]; then
-      echo "Usage: $0 <filename> <size>"
-      exit 1
+ssh-access-permissions-checker() {
+  if [[ -z "${FLUX_AUTOMATION_DIR:-}" ]]; then
+    print -u2 "FLUX_AUTOMATION_DIR is not set."
+    return 1
   fi
 
-  # Extract arguments
-  filename=$1
-  size=$2
-
-  # Use dd to create the file with the specified size
-  dd if=/dev/zero of="$filename" bs=1 count="$size" 2>/dev/null
-
-  # Check if the file was created successfully
-  if [ $? -eq 0 ]; then
-      echo "File $filename created successfully with size $size bytes."
-  else
-      echo "Failed to create file $filename."
+  local checker="$FLUX_AUTOMATION_DIR/local-dev/yellow/environment-access/ssh-access-permissions-checker.sh"
+  if [[ ! -x "$checker" ]]; then
+    print -u2 "Checker is not executable: $checker"
+    return 1
   fi
+  "$checker"
 }
-
