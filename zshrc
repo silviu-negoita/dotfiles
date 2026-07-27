@@ -7,16 +7,11 @@ typeset -U path PATH
 [[ -d /opt/homebrew/bin ]] && path=(/opt/homebrew/bin $path)
 [[ -d /usr/local/bin ]] && path=(/usr/local/bin $path)
 
-# Project-managed aliases and functions.
-for config_file in "$HOME"/.my_*(N); do
-  [[ -r "$config_file" ]] && source "$config_file"
-done
-unset config_file
+[[ -d "$HOME/.zsh/completions" ]] && fpath=("$HOME/.zsh/completions" $fpath)
 
 plugins=(
   git
   gem
-  rbates
   web-search
   kubectl
   zsh-autosuggestions
@@ -30,6 +25,17 @@ if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
   source "$ZSH/oh-my-zsh.sh"
 else
   print -u2 "dotfiles: Oh My Zsh is not installed at $ZSH; run 'rake install'"
+fi
+
+# Prefer the explicit modular configuration. The compatibility fallback keeps
+# an older installation usable until `rake install` links ~/.zsh.
+if [[ -r "$HOME/.zsh/load.zsh" ]]; then
+  source "$HOME/.zsh/load.zsh"
+else
+  for config_file in "$HOME"/.my_*(N); do
+    [[ -r "$config_file" ]] && source "$config_file"
+  done
+  unset config_file
 fi
 
 if command -v rbenv >/dev/null 2>&1; then

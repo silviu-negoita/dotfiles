@@ -1,6 +1,5 @@
 #compdef rake
 
-# Compatibility completion for older ~/.zshrc files that load `rbates`.
 if [[ -f Rakefile ]]; then
   local -a tasks
   tasks=("${(@f)$(rake --tasks --silent 2>/dev/null | awk '{print $2}')}")

@@ -1,7 +1,0 @@
-#compdef cap
-
-if [[ -f Capfile ]]; then
-  local -a tasks
-  tasks=("${(@f)$(cap --tasks 2>/dev/null | awk '/#/{print $2}')}")
-  compadd -- $tasks
-fi

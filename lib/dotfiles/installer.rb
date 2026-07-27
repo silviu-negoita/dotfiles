@@ -15,20 +15,11 @@ module Dotfiles
       Entry.new("my_aliases.sh", "my_aliases.sh", :link),
       Entry.new("my_functions.sh", "my_functions.sh", :link),
       Entry.new("scripts", "scripts", :link),
+      Entry.new("zsh", "zsh", :link),
       Entry.new("vim", "vim", :link),
       Entry.new("vimrc", "vimrc", :link),
       Entry.new("workstation_setup.sh", "workstation_setup.sh", :link),
-      Entry.new("zshrc", "zshrc", :copy),
-      Entry.new(
-        "oh-my-zsh/custom/plugins/rbates",
-        "oh-my-zsh/custom/plugins/rbates",
-        :link
-      ),
-      Entry.new(
-        "oh-my-zsh/custom/rbates.zsh-theme",
-        "oh-my-zsh/custom/rbates.zsh-theme",
-        :link
-      )
+      Entry.new("zshrc", "zshrc", :copy)
     ].freeze
 
     THIRD_PARTY_PLUGINS = {
@@ -37,7 +28,7 @@ module Dotfiles
     }.freeze
 
     REQUIRED_COMMANDS = %w[git rake ruby zsh].freeze
-    OPTIONAL_COMMANDS = %w[fzf vim].freeze
+    OPTIONAL_COMMANDS = %w[docker fzf glab mvn netbird vim].freeze
 
     attr_reader :root, :home
 

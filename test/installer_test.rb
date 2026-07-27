@@ -23,6 +23,7 @@ class InstallerTest < Minitest::Test
     installer.install_dotfiles
 
     assert File.symlink?(File.join(@home, ".my_aliases.sh"))
+    assert File.symlink?(File.join(@home, ".zsh"))
     assert File.symlink?(File.join(@home, ".vim"))
     assert_equal File.binread(File.expand_path("../zshrc", __dir__)),
                  File.binread(File.join(@home, ".zshrc"))
@@ -102,7 +103,8 @@ class InstallerTest < Minitest::Test
 
     installer.install
 
-    assert File.symlink?(
+    assert File.symlink?(File.join(@home, ".zsh"))
+    refute File.exist?(
       File.join(@home, ".oh-my-zsh", "custom", "plugins", "rbates")
     )
   end

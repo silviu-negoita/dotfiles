@@ -1,4 +1,5 @@
-if [[ -n $SSH_CONNECTION ]]; then
+# Legacy compatibility theme. New installations use robbyrussell.
+if [[ -n "$SSH_CONNECTION" ]]; then
   PROMPT='%m:%3~$(git_prompt_info)%# '
 else
   PROMPT='%3~$(git_prompt_info)%# '

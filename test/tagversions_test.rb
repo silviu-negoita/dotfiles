@@ -2,7 +2,7 @@ require "minitest/autorun"
 require "stringio"
 require "tmpdir"
 
-load File.expand_path("../oh-my-zsh/custom/plugins/rbates/bin/tagversions", __dir__)
+load File.expand_path("../scripts/tagversions", __dir__)
 
 class TagVersionsTest < Minitest::Test
   def test_preview_reports_tag_without_modifying_repository

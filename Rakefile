@@ -23,13 +23,17 @@ desc "Validate Ruby, shell, and Vim configuration syntax"
 task :syntax do
   sh "ruby", "-c", "Rakefile"
   sh "ruby", "-c", "irbrc"
-  sh "ruby", "-c", "oh-my-zsh/custom/plugins/rbates/bin/tagversions"
+  sh "ruby", "-c", "scripts/tagversions"
   sh "zsh", "-n",
      "zshrc",
      "my_aliases.sh",
      "my_functions.sh",
+     "oh-my-zsh/custom/plugins/rbates/_rake",
      "oh-my-zsh/custom/plugins/rbates/rbates.plugin.zsh",
-     "oh-my-zsh/custom/rbates.zsh-theme"
+     "oh-my-zsh/custom/plugins/rbates/bin/tagversions",
+     "oh-my-zsh/custom/rbates.zsh-theme",
+     "zsh/completions/_rake",
+     *Dir["zsh/*.zsh"].sort
   sh "zsh", "test/shell_smoke.zsh"
   sh "bash", "-n", "workstation_setup.sh", "scripts/commit_message.sh"
   sh({ "DOTFILES_SKIP_LOCAL" => "1" },
